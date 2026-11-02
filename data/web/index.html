@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Drill Assistant</title>
+<style>
+:root{--bg:#0d0f12;--card:#171a1f;--fg:#e8eaed;--dim:#8a9099;--acc:#4fc3f7;--ok:#2bd96b;--near:#ffd000;--far:#ff5a1f;--bad:#7a7f87;--line:#2a3038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#111418;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2}
+header h1{font-size:17px;margin:0;flex:1}.pill{padding:2px 10px;border-radius:12px;background:var(--line);font-size:13px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 12px;background:#111418}
+nav button{flex:none}main{max-width:980px;margin:0 auto;padding:12px}
+.card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+button,select,input{font:inherit;color:var(--fg);background:#22272e;border:1px solid var(--line);border-radius:8px;padding:7px 12px}
+button{cursor:pointer}button.pri{background:var(--acc);color:#000;border:0}button.warn{background:#5a2415}
+button.on{outline:2px solid var(--acc)}input,select{width:100%}label{display:block;color:var(--dim);font-size:13px;margin-top:8px}
+table{width:100%;border-collapse:collapse}td{padding:3px 4px;border-bottom:1px solid var(--line)}td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.big{font-size:44px;font-weight:600;font-variant-numeric:tabular-nums;text-align:center}
+.small{color:var(--dim);font-size:13px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+canvas{width:100%;max-width:340px;display:block;margin:0 auto}.hide{display:none}
+#login{max-width:340px;margin:60px auto}.err{color:var(--far)}.okc{color:var(--ok)}
+.poses span{display:inline-block;width:46px;text-align:center;padding:6px 0;margin:2px;border-radius:8px;background:var(--line)}
+.poses span.done{background:var(--ok);color:#000}.poses span.act{background:var(--near);color:#000}
+progress{width:100%}pre{white-space:pre-wrap;font-size:12px;max-height:340px;overflow:auto;background:#0a0c0e;padding:8px;border-radius:8px}
+</style>
+</head>
+<body>
+<header><h1>Smart Drill Assistant</h1><span class="pill" id="hq">--</span><span class="pill" id="hb">--</span></header>
+<div id="login" class="card">
+  <h3>Anmeldung</h3>
+  <p class="small">Benutzer <b>admin</b>. Das Passwort steht am Gerät unter <i>Einstellungen &gt; System &gt; WLAN &gt; Web-Passwort</i>.</p>
+  <label>Passwort</label><input id="pw" type="password" autocomplete="current-password">
+  <p><button class="pri" onclick="login()">Anmelden</button> <span id="lerr" class="err"></span></p>
+</div>
+<div id="app" class="hide">
+<nav id="tabs"></nav>
+<main>
+<section data-tab="Live">
+  <div class="grid">
+    <div class="card"><canvas id="cv" width="340" height="340"></canvas>
+      <div class="big" id="lv">--</div><div class="row" style="justify-content:center"><span id="lxy" class="small"></span></div></div>
+    <div class="card"><table id="lt"></table>
+      <div class="row" style="margin-top:10px"><select id="mode"></select><button onclick="api('POST','/api/hold')">Hold</button></div>
+      <label>Sollwinkel / Toleranz (aktives Profil)</label>
+      <div class="row"><input id="tgA" type="number" min="0" max="90" step="0.5" style="width:45%"><input id="tgT" type="number" min="0.05" max="10" step="0.05" style="width:30%"><button onclick="setTarget()">Setzen</button></div>
+      <label>Referenz / Nullpunkt</label>
+      <div class="row"><button onclick="ref('tilt')">Neigung</button><button onclick="ref('3d')">3D</button><button onclick="ref('surface')">Fläche</button><button onclick="ref('surface3d')">Fläche 3D</button><button onclick="ref('clear')">Löschen</button></div>
+      <p class="small">Unsicherheiten sind modellbasierte Schätzungen. Drehung um die Lotrichtung ist mit 6-Achs-IMU nicht absolut messbar (Gyro, driftet).</p>
+    </div>
+  </div>
+</section>
+<section data-tab="Sensoren">
+  <div class="grid"><div class="card"><table id="st"></table></div>
+  <div class="card"><canvas id="hc" width="340" height="180"></canvas><p class="small">Verlauf: Gesamtabweichung (blau), Vibration mg/10 (orange), 30 s</p></div></div>
+</section>
+<section data-tab="Einstellungen"><div class="card" id="cfg"></div></section>
+<section data-tab="Profile"><div class="card"><div id="prof"></div><p><button onclick="newProfile()">Neues Profil</button></p></div></section>
+<section data-tab="Kalibrierung">
+  <div class="grid">
+    <div class="card"><h3>Gyroskop</h3><p class="small">Gerät ruhig hinlegen, dann starten (ca. 3 s).</p>
+      <button class="pri" onclick="api('POST','/api/calibration/gyro').then(()=>toast('Gyro-Kalibrierung läuft'))">Start</button>
+      <button onclick="api('POST','/api/calibration/save').then(()=>toast('Gespeichert'))">Ergebnis speichern</button></div>
+    <div class="card"><h3>Beschleunigung (6 Lagen)</h3>
+      <label><input type="checkbox" id="ext" style="width:auto"> erweitert (3x3, Präzisionswinkel nötig)</label>
+      <div class="poses" id="poses"></div><progress id="pp" max="1" value="0"></progress>
+      <div class="row"><button class="pri" onclick="accel('start')">Start</button><button onclick="accel('pose')">Erkannte Lage messen</button><button onclick="accel('solve')">Berechnen + speichern</button><button onclick="accel('cancel')">Abbruch</button></div>
+      <p class="small" id="ares"></p></div>
+    <div class="card"><h3>Kalibrierdaten</h3><pre id="cald"></pre><button class="warn" onclick="if(confirm('Kalibrierung löschen?'))api('DELETE','/api/calibration').then(loadCal)">Löschen</button></div>
+  </div>
+</section>
+<section data-tab="System">
+  <div class="grid">
+    <div class="card"><h3>Status</h3><table id="sys"></table></div>
+    <div class="card"><h3>Firmware-Update</h3><p class="small">firmware.bin aus <code>.pio/build/sda_s3_touch_128/</code>. Das neue Image bestätigt sich nach erfolgreichem Selbsttest; sonst automatische Rückkehr zur alten Firmware.</p>
+      <input type="file" id="fw" accept=".bin"><progress id="fwp" max="100" value="0"></progress><p><button class="pri" onclick="upload()">Hochladen</button> <span id="fwm"></span></p></div>
+    <div class="card"><h3>Konfiguration</h3><div class="row"><button onclick="exportCfg()">Export</button><input type="file" id="imp" accept=".json" style="width:auto"><button onclick="importCfg()">Import</button></div>
+      <label><input type="checkbox" id="impcal" style="width:auto"> Kalibrierung mit importieren</label>
+      <p><button class="warn" onclick="if(confirm('Neustart?'))api('POST','/api/reboot')">Neustart</button></p></div>
+    <div class="card"><h3>Log</h3><button onclick="loadLog()">Aktualisieren</button><pre id="log"></pre></div>
+  </div>
+</section>
+</main></div>
+<script>
+const $=id=>document.getElementById(id);let AUTH=sessionStorage.getItem('auth')||'',ws=null,live={},hist=[],cfg=null,profs=null;
+const MODES=['Bohrassistent','Wasserwaage','Winkelmesser','Nullpunkt','Referenzfläche','Präzision'];
+const TS=['ungültig','weit','nah','innen','im Ziel'],TSC=['--bad','--far','--near','--near','--ok'];
+const POSES=['+X','-X','+Y','-Y','+Z','-Z'];
+function toast(m){const e=$('fwm');e.textContent=m;setTimeout(()=>{if(e.textContent==m)e.textContent=''},3000)}
+async function api(method,path,body){const o={method,headers:{'Authorization':'Basic '+AUTH}};
+ if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
+ const r=await fetch(path,o);const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){j=t}
+ if(r.status==401){logout();throw new Error('auth')}if(!r.ok){alert((j.error&&j.error.message)||('Fehler '+r.status));throw new Error(r.status)}return j}
+async function login(){AUTH=btoa('admin:'+$('pw').value);try{await api('GET','/api/status');sessionStorage.setItem('auth',AUTH);start()}catch(e){$('lerr').textContent='Anmeldung fehlgeschlagen'}}
+function logout(){sessionStorage.removeItem('auth');AUTH='';$('app').classList.add('hide');$('login').classList.remove('hide')}
+function tabs(){const n=$('tabs');document.querySelectorAll('section').forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.dataset.tab;
+ b.onclick=()=>{document.querySelectorAll('section').forEach(x=>x.classList.add('hide'));s.classList.remove('hide');n.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');onTab(s.dataset.tab)};
+ n.appendChild(b);if(i)s.classList.add('hide');else b.classList.add('on')})}
+function onTab(t){if(t=='Einstellungen')loadCfg();if(t=='Profile')loadProf();if(t=='Kalibrierung')loadCal();if(t=='System'){loadSys();loadLog()}}
+async function start(){$('login').classList.add('hide');$('app').classList.remove('hide');
+ $('mode').innerHTML=MODES.map((m,i)=>`<option value=${i}>${m}</option>`).join('');$('mode').onchange=e=>api('POST','/api/mode',{mode:+e.target.value});
+ $('poses').innerHTML=POSES.map(p=>`<span>${p}</span>`).join('');
+ const t=await api('GET','/api/token');connect(t);loadProf()}
+function connect(t){ws=new WebSocket(`ws://${location.hostname}:${t.port}/?t=${t.token}`);ws.onmessage=e=>{live=JSON.parse(e.data);render()};
+ ws.onclose=()=>setTimeout(()=>api('GET','/api/token').then(connect).catch(()=>{}),2000)}
+const f=(v,d=2)=>v===undefined||v===null?'--':(+v).toFixed(d);
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v)}
+function render(){const L=live;$('hq').textContent=L.qn;$('hb').textContent=(L.pct>=0?'ca. '+L.pct+'% ':'')+f(L.bat)+' V';
+ if(document.activeElement!=$('mode'))$('mode').value=L.mode;
+ $('lv').textContent=(L.mode==2||L.mode==5?f(L.val,2):f(L.dev[2],2))+'°';$('lv').style.color=css(TSC[L.ts]);
+ $('lxy').textContent=`X ${f(L.dev[0])}°  Y ${f(L.dev[1])}°  ${TS[L.ts]}${L.hold?'  HOLD':''}`;
+ $('lt').innerHTML=row('Modus',MODES[L.mode])+row('Soll / Toleranz',f(L.target,1)+'° / ±'+f(L.tol,2)+'°')+row('Qualität',L.qn)+row('Neigung X / Y',f(L.tilt[0])+'° / '+f(L.tilt[1])+'°')+
+  row('Unsicherheit (Schätzung)','±'+f(L.sig,3)+'°')+row('Referenz-Drift (Schätzung)','±'+f(L.hsig,2)+'°')+row('Vibration',f(L.vib,0)+' mg')+row('UI',f(L.fps,0)+' FPS');
+ $('st').innerHTML=row('Beschl. X/Y/Z [g]',L.acc.map(v=>f(v,4)).join(' '))+row('Gyro X/Y/Z [°/s]',L.gyr.map(v=>f(v,3)).join(' '))+row('Temperatur',f(L.temp,1)+' °C')+
+  row('Abtastrate',f(L.rate,1)+' Hz')+row('Verlorene Samples',L.lost)+row('Bewegung',['Stillstand','langsam','schnell'][L.motion])+row('Kalibriert (Gyro/Accel)',(L.gcal?'ja':'nein')+' / '+(L.acal?'ja':'nein'));
+ hist.push([L.dev[2],L.vib]);if(hist.length>300)hist.shift();drawCross();drawHist();
+ document.querySelectorAll('#poses span').forEach((s,i)=>{s.className=(L.cal.mask>>i&1)?'done':(L.cal.act==i?'act':(L.cal.det==i?'act':''))});$('pp').value=L.cal.p==2?L.cal.pr:0}
+function row(a,b){return `<tr><td>${a}</td><td>${b}</td></tr>`}
+function drawCross(){const c=$('cv'),x=c.getContext('2d'),W=c.width,R=W/2-14,L=live;x.clearRect(0,0,W,W);x.strokeStyle=css('--line');x.lineWidth=1;
+ for(let i=1;i<=4;i++){x.beginPath();x.arc(W/2,W/2,R*i/4,0,7);x.stroke()}x.beginPath();x.moveTo(14,W/2);x.lineTo(W-14,W/2);x.moveTo(W/2,14);x.lineTo(W/2,W-14);x.stroke();
+ const sc=Math.max(2,Math.ceil(Math.max(Math.abs(L.dev[0]),Math.abs(L.dev[1]))/5)*5),k=R/sc;const col=css(TSC[L.ts]);
+ x.strokeStyle=col;x.lineWidth=2;x.beginPath();x.arc(W/2,W/2,Math.max(4,L.tol*k),0,7);x.stroke();
+ let px=L.dev[0]*k,py=L.dev[1]*k,r=Math.hypot(px,py);if(r>R){px*=R/r;py*=R/r}x.fillStyle=col;x.beginPath();x.arc(W/2+px,W/2-py,9,0,7);x.fill();
+ x.fillStyle=css('--dim');x.font='12px sans-serif';x.fillText('Skala ±'+sc+'°',8,W-6)}
+function drawHist(){const c=$('hc'),x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);if(hist.length<2)return;const m=Math.max(1,...hist.map(h=>h[0]));
+ [[0,css('--acc'),m],[1,css('--far'),Math.max(10,...hist.map(h=>h[1]))]].forEach(([i,col,mx])=>{x.strokeStyle=col;x.beginPath();hist.forEach((h,j)=>{const X=j*W/300,Y=H-h[i]/mx*(H-8)-4;j?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()})}
+async function setTarget(){const b={};if($('tgA').value!=='')b.angle=+$('tgA').value;if($('tgT').value!=='')b.tolerance=+$('tgT').value;await api('POST','/api/target',b);loadProf()}
+function ref(t){api('POST','/api/reference',{type:t})}
+// ---- settings form, generated from the configuration object
+const LABELS={filterStrength:['Filterstärke',[0,1,2,3,4]],fusion:['Sensorfusion',['Mahony','Komplementär','Madgwick']],precisionWindowSec:['Präzisions-Messdauer [s]'],
+ holdTimeSec:['Haltezeit Ziel [s]'],hemisphere:['Bohrrichtung',{'0':'Automatisch','-1':'Abwärts','1':'Aufwärts'}],zeroKind:['Nullpunkt-Art',['Neigung (driftfrei)','3D (Gyro)']],
+ reference3D:['Referenzfläche 3D (Gyro)'],customAngleDeg:['Eigener Schnellwinkel [°]'],tempCoeffAssumedDpsPerK:['Angenommener Gyro-TK [°/s/K]'],onlineBiasTracking:['Online-Bias-Nachführung'],
+ startupGyroCal:['Gyro-Kalibrierung beim Start',['Nie','Wenn ruhig','Immer (geführt)']],lastMode:['Betriebsmodus',MODES],brightness:['Helligkeit [%]'],dimAfterSec:['Dimmen nach [s] (0=nie)'],
+ offAfterSec:['Display aus nach [s] (0=nie)'],rotation:['Displayrotation',['0°','90°','180°','270°']],theme:['Design',['Dunkel','Hoher Kontrast']],colorMode:['Farbmodus',['Standard','Farbenblind']],
+ largeFont:['Schriftgröße',['Normal','Groß']],decimals:['Nachkommastellen',{'1':'1','2':'2'}],touchLockAuto:['Touchsperre bei Vibration'],showHistory:['Verlauf anzeigen'],
+ historyWindowSec:['Verlaufsfenster',{'5':'5 s','15':'15 s','30':'30 s'}],wifiMode:['WLAN-Modus',['Aus','Access Point','Client']],ssid:['WLAN SSID'],password:['WLAN Passwort (leer = unverändert)'],
+ hostname:['Hostname (mDNS)'],mdns:['mDNS'],sleepAfterMin:['Ruhezustand nach [min] (0=nie)'],bootButton:['BOOT-Taste',['Hold','Nullpunkt','Nächster Modus','Touchsperre']],axisMap:['Achszuordnung Sensor→Gerät'],
+ logLevel:['Log-Level',['Fehler','Warnung','Info','Debug']],batteryDividerFactor:['Akku-Spannungsteiler'],lowBatteryV:['Akku-Warnung [V]'],criticalBatteryV:['Akku kritisch [V]'],liveRateHz:['Live-Datenrate [Hz]']};
+const SKIP=['version','activeProfile','passwordSet'];
+async function loadCfg(){cfg=await api('GET','/api/config');let h='';for(const g of ['measurement','display','system']){h+=`<h3>${{measurement:'Messung',display:'Anzeige',system:'System'}[g]}</h3>`;
+ for(const [k,v] of Object.entries(cfg[g])){if(SKIP.includes(k))continue;const L=LABELS[k]||[k];const id=`c_${g}_${k}`;h+=`<label>${L[0]}</label>`;
+  if(typeof v=='boolean')h+=`<select id=${id}><option value=1 ${v?'selected':''}>Ein</option><option value=0 ${v?'':'selected'}>Aus</option></select>`;
+  else if(L[1]){const o=Array.isArray(L[1])?L[1].map((t,i)=>[i,t]):Object.entries(L[1]);h+=`<select id=${id}>${o.map(([a,t])=>`<option value="${a}" ${a==v?'selected':''}>${t}</option>`).join('')}</select>`}
+  else h+=`<input id=${id} value="${v}" ${typeof v=='number'?'type=number step=any':''}>`}}
+ h+=`<label>WLAN Passwort</label><input id="c_system_password" type="password" placeholder="${cfg.system.passwordSet?'gespeichert':'leer'}">`;
+ $('cfg').innerHTML=h+'<p><button class="pri" onclick="saveCfg()">Speichern</button></p>'}
+async function saveCfg(){const out={measurement:{},display:{},system:{}};for(const g in out)for(const [k,v] of Object.entries(cfg[g])){if(SKIP.includes(k))continue;const e=$(`c_${g}_${k}`);if(!e)continue;
+ out[g][k]=typeof v=='boolean'?e.value=='1':typeof v=='number'?+e.value:e.value}const pw=$('c_system_password').value;if(pw)out.system.password=pw;else delete out.system.password;
+ await api('PUT','/api/config',out);toast('Gespeichert');loadCfg()}
+// ---- profiles
+async function loadProf(){profs=await api('GET','/api/profiles');let h='<table>';profs.profiles.forEach((p,i)=>{if(!p.used)return;
+ if(i==profs.active){$('tgA').value=p.targetAngleDeg;$('tgT').value=p.toleranceDeg}
+ h+=`<tr><td><b>${p.name}</b>${i==profs.active?' (aktiv)':''}<br><span class=small>Soll ${p.targetAngleDeg}° ±${p.toleranceDeg}° · Achse ${p.mount.axis.map(v=>v.toFixed(3)).join(', ')} · Methode ${['Standard','Voreinst.','V-Nut','Ständer'][p.mount.method]}${p.mount.qualityDeg>=0?' · Rest '+p.mount.qualityDeg.toFixed(2)+'°':''}</span></td>
+ <td><button onclick="editProf(${i})">Bearbeiten</button> <button onclick="api('POST','/api/profiles/${i}/activate').then(loadProf)">Aktiv</button> <button class=warn onclick="delProf(${i})">✕</button></td></tr>`});
+ $('prof').innerHTML=h+'</table><div id="pedit"></div>'}
+function editProf(i){const p=profs.profiles[i];$('pedit').innerHTML=`<h3>Profil bearbeiten</h3><label>Name</label><input id=pn maxlength=20 value="${p.name}">
+ <label>Sollwinkel [°]</label><input id=pa type=number value=${p.targetAngleDeg}><label>Toleranz [°]</label><input id=pt type=number step=0.05 value=${p.toleranceDeg}>
+ <label>Skala</label><select id=ps>${['±20°','±10°','±5°','±2°','Auto'].map((t,k)=>`<option value=${k} ${k==p.scale?'selected':''}>${t}</option>`).join('')}</select>
+ <label>Winkelkorrektur [°]</label><input id=pc type=number step=0.01 value=${p.mount.angleCorrectionDeg}>
+ <label>Punktdarstellung</label><select id=pi><option value=0>Achsposition</option><option value=1 ${p.invertMarker?'selected':''}>Libelle</option></select>
+ <p><button class=pri onclick="saveProf(${i})">Speichern</button></p>`}
+async function saveProf(i){await api('PUT','/api/profiles/'+i,{name:$('pn').value,targetAngleDeg:+$('pa').value,toleranceDeg:+$('pt').value,scale:+$('ps').value,invertMarker:$('pi').value=='1',mount:{angleCorrectionDeg:+$('pc').value}});loadProf()}
+async function delProf(i){if(confirm('Profil löschen?')){await api('DELETE','/api/profiles/'+i);loadProf()}}
+async function newProfile(){const n=prompt('Name des Profils (max. 20 Zeichen)','Neues Profil');if(n){await api('POST','/api/profiles',{name:n});loadProf()}}
+// ---- calibration
+async function loadCal(){const c=await api('GET','/api/calibration');$('cald').textContent=JSON.stringify(c,null,1)}
+async function accel(a){const b={action:a};if(a=='start')b.extended=$('ext').checked;if(a=='pose'){if(live.cal.det<0){alert('Keine Lage erkannt');return}b.pose=live.cal.det}if(a=='solve')b.save=true;
+ const r=await api('POST','/api/calibration/accel',b);if(a=='solve'){$('ares').textContent=`Restfehler ${r.residualMg.toFixed(1)} mg, gespeichert: ${r.saved}`;loadCal()}}
+// ---- system
+async function loadSys(){const s=await api('GET','/api/status');$('sys').innerHTML=row('Firmware',s.firmware+' ('+s.partition+(s.imageConfirmed?'':', unbestätigt')+')')+row('Build',s.build)+row('Board',s.board)+
+ row('Laufzeit',s.uptimeS+' s')+row('Heap frei / min',(s.freeHeap/1024|0)+' / '+(s.minFreeHeap/1024|0)+' kB')+row('PSRAM frei',(s.freePsram/1024|0)+' kB')+row('CPU (Schätzung)',s.cpuLoadEstimatePct.map(v=>f(v,0)+'%').join(' / '))+
+ row('Akku',f(s.battery.voltage)+' V'+(s.battery.percentEstimate>=0?' (ca. '+s.battery.percentEstimate+'%)':''))+row('WLAN',['Aus','AP','Client'][s.wifi.mode]+' '+s.wifi.ip+' '+s.wifi.ssid)+
+ row('Selbsttest',['imu','touch','display','fs','calibrationLoaded'].map(k=>k+':'+(s.selfTest[k]?'ok':'–')).join(' '))}
+async function loadLog(){const r=await fetch('/api/log',{headers:{'Authorization':'Basic '+AUTH}});$('log').textContent=await r.text()}
+function upload(){const file=$('fw').files[0];if(!file)return;const fd=new FormData();fd.append('firmware',file,file.name);const x=new XMLHttpRequest();
+ x.upload.onprogress=e=>{$('fwp').value=e.loaded/e.total*100};x.onload=()=>{$('fwm').textContent=x.status==200?'Erfolgreich – Neustart …':('Fehler: '+x.responseText)};
+ x.open('POST','/api/update');x.setRequestHeader('Authorization','Basic '+AUTH);x.send(fd)}
+async function exportCfg(){const j=await api('GET','/api/export');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:'application/json'}));a.download='smartdrill-config.json';a.click()}
+async function importCfg(){const file=$('imp').files[0];if(!file)return;const j=JSON.parse(await file.text());j.importCalibration=$('impcal').checked;const r=await api('POST','/api/import',j);toast('Import: '+JSON.stringify(r))}
+tabs();if(AUTH)api('GET','/api/status').then(start).catch(logout);
+</script>
+</body>
+</html>

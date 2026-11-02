@@ -9,8 +9,8 @@ const char* qualityStateName(QualityState s) {
         case QualityState::Motion: return "Bewegung";
         case QualityState::Vibration: return "Vibration";
         case QualityState::CalibrationRequired: return "Kalibrierung erforderlich";
-        case QualityState::SensorFault: return "Sensor gestoert";
-        case QualityState::OrientationLimited: return "Orientierung eingeschraenkt";
+        case QualityState::SensorFault: return "Sensor gestört";
+        case QualityState::OrientationLimited: return "Orientierung eingeschränkt";
         case QualityState::ReferenceDrift: return "Referenz evtl. gedriftet";
     }
     return "?";

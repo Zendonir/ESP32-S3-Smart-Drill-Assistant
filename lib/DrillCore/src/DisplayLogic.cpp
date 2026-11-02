@@ -34,7 +34,7 @@ float OneEuroFilter::update(float x, float dt) {
 // ----------------------------------------------------------------------------
 const char* targetStateName(TargetState s) {
     switch (s) {
-        case TargetState::Invalid: return "ungueltig";
+        case TargetState::Invalid: return "ungültig";
         case TargetState::Far: return "weit";
         case TargetState::Near: return "nah";
         case TargetState::Inside: return "innen";
@@ -102,7 +102,7 @@ const char* scaleModeName(ScaleMode m) {
         case ScaleMode::Coarse20: return "Grob 20";
         case ScaleMode::Normal10: return "Normal 10";
         case ScaleMode::Fine5: return "Fein 5";
-        case ScaleMode::Precision2: return "Praez. 2";
+        case ScaleMode::Precision2: return "Präz. 2";
         case ScaleMode::Auto: return "Auto";
     }
     return "?";

@@ -6,7 +6,7 @@ namespace sda {
 const char* fusionTypeName(FusionType t) {
     switch (t) {
         case FusionType::Mahony: return "Mahony";
-        case FusionType::Complementary: return "Komplementaer";
+        case FusionType::Complementary: return "Komplementär";
         case FusionType::Madgwick: return "Madgwick";
     }
     return "?";

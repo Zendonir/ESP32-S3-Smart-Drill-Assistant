@@ -8,8 +8,8 @@ const char* referenceKindName(ReferenceKind k) {
         case ReferenceKind::None: return "keine";
         case ReferenceKind::TiltZero: return "Neigungs-Nullpunkt";
         case ReferenceKind::Full3D: return "3D-Nullpunkt (Gyro)";
-        case ReferenceKind::SurfaceRestricted: return "Flaeche (nur Neigung)";
-        case ReferenceKind::Surface3D: return "Flaeche 3D (Gyro)";
+        case ReferenceKind::SurfaceRestricted: return "Fläche (nur Neigung)";
+        case ReferenceKind::Surface3D: return "Fläche 3D (Gyro)";
     }
     return "?";
 }

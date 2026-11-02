@@ -11,8 +11,8 @@ const char* appModeName(AppMode m) {
         case AppMode::Level: return "Wasserwaage";
         case AppMode::Angle: return "Winkelmesser";
         case AppMode::Zero: return "Nullpunkt";
-        case AppMode::Reference: return "Referenzflaeche";
-        case AppMode::Precision: return "Praezision";
+        case AppMode::Reference: return "Referenzfläche";
+        case AppMode::Precision: return "Präzision";
         default: return "?";
     }
 }
@@ -24,7 +24,7 @@ const char* appModeShort(AppMode m) {
         case AppMode::Angle: return "WINKEL";
         case AppMode::Zero: return "NULL";
         case AppMode::Reference: return "REFERENZ";
-        case AppMode::Precision: return "PRAEZISION";
+        case AppMode::Precision: return "PRÄZISION";
         default: return "?";
     }
 }
@@ -33,7 +33,7 @@ const char* buttonActionName(ButtonAction a) {
     switch (a) {
         case ButtonAction::Hold: return "Hold";
         case ButtonAction::Zero: return "Nullpunkt";
-        case ButtonAction::NextMode: return "Naechster Modus";
+        case ButtonAction::NextMode: return "Nächster Modus";
         case ButtonAction::TouchLock: return "Touchsperre";
         default: return "?";
     }
