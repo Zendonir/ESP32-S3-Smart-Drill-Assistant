@@ -9,7 +9,7 @@ einer kreisförmigen Zielanzeige, wie weit die Bohrachse vom Sollwinkel abweicht
 arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optional.
 
 > **Stand der Verifikation:** Die Firmware wird mit PlatformIO vollständig gebaut, und die
-> hardwareunabhängige Messbibliothek ist mit 70 Unit-Tests auf dem Host geprüft.
+> hardwareunabhängige Messbibliothek ist mit 74 Unit-Tests auf dem Host geprüft.
 > **Auf echter Hardware ist sie noch nicht getestet.** Pinbelegung, Achsorientierung des
 > QMI8658, Farbinvertierung des Displays, Touch-Orientierung und Akku-Spannungsteiler
 > müssen am konkreten Board geprüft werden, siehe [docs/Hardware.md](docs/Hardware.md)
@@ -95,6 +95,23 @@ Farbe und Form gehören immer zusammen:
 * **grau**: Messung ungültig, Punkt hohl, Zahlen durch „--“ ersetzt
 
 Ein Farbenblind-Modus ist wählbar.
+
+### Winkelbohren (z. B. 45°)
+
+Im Schnellmenü wählst du unter **Soll** den Winkel und unter **Bezug** die Bedeutung des Winkels.
+Bezug und Winkel werden pro Profil gespeichert. Dieselbe Einstellung gibt es unter Menü › Messung › Winkelbezug und in der Weboberfläche.
+
+| Bezug | Bedeutung | Messprinzip |
+|---|---|---|
+| zur Horizontalen | 45° = Bohrachse 45° gegen die Waagerechte, 90° = senkrecht | absolut, Schwerkraft, driftfrei |
+| zur Vertikalen | 45° = 45° gegen das Lot, 0° = senkrecht, 90° = waagerecht | absolut, Schwerkraft, driftfrei |
+| Nullpunkt + oben / unten | Bohrer an der Bezugsachse ausrichten (z. B. senkrecht zur Wand), **lange drücken**, dann um X° nach oben bzw. unten neigen | relativ, Schwerkraft, driftfrei |
+| Nullpunkt + links / rechts | wie oben, dann um X° seitlich schwenken | relativ, **Gyroskop, driftet** |
+
+Bei den absoluten Bezügen und bei „oben/unten“ ist die seitliche Richtung frei (Anzeige „Seite frei“).
+„Links/rechts“ lässt sich mit einem 6-Achsen-Sensor nicht absolut messen, deshalb gibt es diese Richtung nur relativ zu einem Nullpunkt.
+In diesem Fall zeigt die Anzeige die geschätzte Drift (±°) und das Alter des Nullpunkts. Grün gibt es nur, solange die geschätzte Drift in die Toleranz passt; sonst neu nullen.
+Ist die Bezugsachse fast senkrecht (näher als 10° am Lot), ist „links/rechts“ nicht definiert, und das Gerät meldet das.
 
 Erstinbetriebnahme: Menü › Kalibrierung › **Gyroskop**, dann **Sensor 6 Lagen**,
 dann **Montage** (V-Nut oder Ständer). Details stehen in [docs/Calibration.md](docs/Calibration.md).

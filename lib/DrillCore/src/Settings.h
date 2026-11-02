@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "AngleTarget.h"
 #include "CoordinateTransforms.h"
 #include "DisplayLogic.h"
 #include "SensorFusion.h"
@@ -97,7 +98,8 @@ struct Profile {
     bool used = false;
     char name[kProfileNameLen + 1] = "";
     MountModel mount;
-    float targetAngleDeg = 90.0f;   ///< inclination target (0 horizontal .. 90 vertical)
+    float targetAngleDeg = 90.0f;   ///< target angle, meaning defined by angleRef
+    AngleReference angleRef = AngleReference::Horizontal;  ///< reference of targetAngleDeg
     float toleranceDeg = 0.5f;
     ScaleMode scale = ScaleMode::Auto;
     bool invertMarker = false;      ///< false: marker = axis position; true: bubble style

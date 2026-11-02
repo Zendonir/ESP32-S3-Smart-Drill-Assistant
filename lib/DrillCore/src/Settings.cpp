@@ -207,6 +207,7 @@ int validateProfile(Profile& p) {
     n += fixRange(p.mount.angleCorrectionDeg, -10.0f, 10.0f, 0.0f);
     if (!std::isfinite(p.mount.qualityDeg)) { p.mount.qualityDeg = -1.0f; ++n; }
     n += fixRange(p.targetAngleDeg, 0.0f, 90.0f, 90.0f);
+    n += fixRange<uint8_t>(reinterpret_cast<uint8_t&>(p.angleRef), 0, uint8_t(AngleReference::Count) - 1, 0);
     n += fixRange(p.toleranceDeg, 0.05f, 10.0f, 0.5f);
     n += fixRange<uint8_t>(reinterpret_cast<uint8_t&>(p.scale), 0, 4, 4);
     return n;

@@ -197,6 +197,7 @@ void profileToJson(const Profile& p, JsonObject o) {
     m["qualityDeg"] = p.mount.qualityDeg;
     m["angleCorrectionDeg"] = p.mount.angleCorrectionDeg;
     o["targetAngleDeg"] = p.targetAngleDeg;
+    o["angleReference"] = static_cast<int>(p.angleRef);
     o["toleranceDeg"] = p.toleranceDeg;
     o["scale"] = static_cast<int>(p.scale);
     o["invertMarker"] = p.invertMarker;
@@ -217,6 +218,7 @@ bool profileFromJson(JsonObjectConst o, Profile& out) {
         ok &= getNum(m, "angleCorrectionDeg", p.mount.angleCorrectionDeg);
     }
     ok &= getNum(o, "targetAngleDeg", p.targetAngleDeg);
+    ok &= getEnum(o, "angleReference", p.angleRef);
     ok &= getNum(o, "toleranceDeg", p.toleranceDeg);
     ok &= getEnum(o, "scale", p.scale);
     ok &= getBool(o, "invertMarker", p.invertMarker);

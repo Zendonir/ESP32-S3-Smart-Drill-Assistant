@@ -414,22 +414,22 @@ void UIManager::openQuickMenu() {
         const char* sym;
         const char* txt;
     };
-    const Item items[8] = {
-        {LV_SYMBOL_GPS, "Soll"},      {LV_SYMBOL_SHUFFLE, "Tol."}, {LV_SYMBOL_IMAGE, "Skala"},
+    const Item items[9] = {
+        {LV_SYMBOL_GPS, "Soll"},      {LV_SYMBOL_LOOP, "Bezug"},   {LV_SYMBOL_SHUFFLE, "Tol."}, {LV_SYMBOL_IMAGE, "Skala"},
         {hold_ ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE, hold_ ? "Live" : "Hold"},
         {hold_ ? LV_SYMBOL_SAVE : LV_SYMBOL_REFRESH, hold_ ? "Speich." : "Null"},
         {LV_SYMBOL_EYE_CLOSE, "Sperre"}, {LV_SYMBOL_LIST, "Profil"}, {LV_SYMBOL_SETTINGS, "Menü"},
     };
-    for (int i = 0; i < 8; ++i) {
-        const float a = deg2rad(90.0f - 45.0f * i);
+    for (int i = 0; i < 9; ++i) {
+        const float a = deg2rad(90.0f - 40.0f * i);
         lv_obj_t* b = lv_btn_create(quick_);
-        lv_obj_set_size(b, 54, 54);
+        lv_obj_set_size(b, 50, 50);
         lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_color(b, lv_color_hex(0x22272E), 0);
         lv_obj_set_style_bg_color(b, p.accent, LV_STATE_PRESSED);
         lv_obj_set_style_shadow_width(b, 0, 0);
         lv_obj_set_style_pad_all(b, 0, 0);
-        lv_obj_align(b, LV_ALIGN_CENTER, static_cast<lv_coord_t>(82 * cosf(a)), static_cast<lv_coord_t>(-82 * sinf(a)));
+        lv_obj_align(b, LV_ALIGN_CENTER, static_cast<lv_coord_t>(84 * cosf(a)), static_cast<lv_coord_t>(-84 * sinf(a)));
         lv_obj_set_user_data(b, reinterpret_cast<void*>(intptr_t(i)));
         lv_obj_add_event_cb(b, quickEvent, LV_EVENT_CLICKED, this);
         lv_obj_t* s = theme::label(b, theme::medium(), p.fg, items[i].sym);
@@ -438,7 +438,7 @@ void UIManager::openQuickMenu() {
         lv_obj_align(l, LV_ALIGN_CENTER, 0, 13);
     }
     lv_obj_t* close = lv_btn_create(quick_);
-    lv_obj_set_size(close, 64, 64);
+    lv_obj_set_size(close, 58, 58);
     lv_obj_center(close);
     lv_obj_set_style_radius(close, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(close, lv_color_hex(0x30363F), 0);
@@ -460,13 +460,14 @@ void UIManager::quickEvent(lv_event_t* e) {
     self->closeQuickMenu();
     switch (id) {
         case 0: self->openPicker(1); break;
-        case 1: self->openPicker(2); break;
-        case 2: self->openPicker(3); break;
-        case 3: self->toggleHold(); break;
-        case 4: self->onLongPress(); break;
-        case 5: self->setTouchLock(true); break;
-        case 6: self->openPicker(4); break;
-        case 7: self->openMenuRoot(); break;
+        case 1: self->openPicker(5); break;
+        case 2: self->openPicker(2); break;
+        case 3: self->openPicker(3); break;
+        case 4: self->toggleHold(); break;
+        case 5: self->onLongPress(); break;
+        case 6: self->setTouchLock(true); break;
+        case 7: self->openPicker(4); break;
+        case 8: self->openMenuRoot(); break;
         default: break;
     }
 }
@@ -508,6 +509,14 @@ void UIManager::openPicker(int kind) {
             opts = "Grob ±20°\nNormal ±10°\nFein ±5°\nPräzision ±2°\nAutomatisch";
             sel = static_cast<int>(prof.scale);
             break;
+        case 5:
+            title = "Winkelbezug";
+            for (int i = 0; i < static_cast<int>(AngleReference::Count); ++i) {
+                if (i) opts += "\n";
+                opts += angleReferenceName(static_cast<AngleReference>(i));
+            }
+            sel = static_cast<int>(prof.angleRef);
+            break;
         case 4: {
             title = "Profil";
             profileNames_.clear();
@@ -537,7 +546,7 @@ void UIManager::openPicker(int kind) {
     lv_roller_set_options(pickerRoller_, opts.c_str(), LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(pickerRoller_, 3);
     lv_obj_set_width(pickerRoller_, 170);
-    lv_obj_set_style_text_font(pickerRoller_, theme::large(), 0);
+    lv_obj_set_style_text_font(pickerRoller_, kind == 5 ? theme::medium() : theme::large(), 0);
     lv_obj_set_style_bg_color(pickerRoller_, lv_color_hex(0x101214), 0);
     lv_obj_set_style_text_color(pickerRoller_, p.fg, 0);
     lv_obj_set_style_bg_color(pickerRoller_, p.accent, LV_PART_SELECTED);
@@ -586,6 +595,11 @@ void UIManager::pickerOk(lv_event_t* e) {
             break;
         case 3:
             self->app_->profiles.update(active, [sel](Profile& p) { p.scale = static_cast<ScaleMode>(sel); });
+            break;
+        case 5:
+            self->app_->profiles.update(active, [sel](Profile& p) { p.angleRef = static_cast<AngleReference>(sel); });
+            if (angleReferenceNeedsZero(static_cast<AngleReference>(sel)))
+                self->main_.showToast("Bezugsachse ausrichten\nund lange drücken", 2500);
             break;
         case 4:
             if (sel >= 0 && sel < static_cast<int>(self->profileNames_.size())) {

@@ -48,7 +48,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | GET | `/` | Weboberfläche (gzip, ohne Auth; alle Daten kommen aus der API) |
 | GET | `/api/status` | Firmware, Partition, Bestätigung des Images, Laufzeit, Heap, CPU-Schätzung, Modus, Qualität, Akku, WLAN, Selbsttest |
 | GET | `/api/imu` | kalibrierte und rohe Accel/Gyro-Werte (Geräteframe), Temperatur, Rate, verlorene Samples, Fehlerzähler, Vibration, Bewegung, Werkzeugzustand |
-| GET | `/api/orientation` | Quaternion, Up-Vektor, Wasserwaage, Bohrachse (Elevation, Neigung, Rolle, Azimut *driftend*), Abweichung, geschätzte Unsicherheit, Referenz, Präzisionsergebnis |
+| GET | `/api/orientation` | `deviation.angleReference`, `targetValid`, `needsZero`, `targetUsesGyro`, `targetElevationDeg`, `problem`; dazu Quaternion, Up-Vektor, Wasserwaage, Bohrachse (Elevation, Neigung, Rolle, Azimut *driftend*), Abweichung, geschätzte Unsicherheit, Referenz, Präzisionsergebnis |
 | GET | `/api/config` | Einstellungen (ohne Passwörter, `passwordSet`) |
 | PUT | `/api/config` | Einstellungen teilweise ändern |
 | GET | `/api/calibration` | Status des laufenden Verfahrens und Kalibrierdaten |
@@ -56,7 +56,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | POST | `/api/calibration/gyro` | Gyro-Kalibrierung starten (Gerät ruhig). Antwort 202 |
 | POST | `/api/calibration/accel` | `{"action":"start","extended":false}` / `{"action":"pose","pose":0..5}` / `{"action":"solve","save":true}` / `{"action":"cancel"}` |
 | POST | `/api/calibration/save` | aktuelle Kalibrierung (z. B. nach Gyro) dauerhaft speichern |
-| POST | `/api/reference` | `{"type":"tilt"\|"3d"\|"surface"\|"surface3d"\|"clear"}` |
+| POST | `/api/reference` | `{"type":"tilt"\|"3d"\|"axis"\|"surface"\|"surface3d"\|"clear"}`. `axis` = Bezugsachse für Winkelbohren (3D-Nullpunkt) |
 | GET | `/api/profiles` | alle Profile und `active` |
 | POST | `/api/profiles` | `{"name":"...","from":idx}`: neues Profil als Kopie. Antwort 201 `{"index":n}` |
 | PUT | `/api/profiles/{i}` | Profil teilweise ändern (Felder wie in GET, `mount.axis` wird normalisiert) |
@@ -64,7 +64,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | POST | `/api/profiles/{i}/activate` | Profil aktivieren |
 | POST | `/api/mode` | `{"mode":0..5}`: 0 Bohren, 1 Waage, 2 Winkel, 3 Nullpunkt, 4 Referenz, 5 Präzision |
 | POST | `/api/hold` | Hold umschalten |
-| POST | `/api/target` | `{"angle":0..90,"tolerance":0.05..10}` für das aktive Profil |
+| POST | `/api/target` | `{"angle":0..90,"reference":0..5,"tolerance":0.05..10}` für das aktive Profil. `reference`: 0 zur Horizontalen, 1 zur Vertikalen, 2 Nullpunkt + oben, 3 Nullpunkt + unten, 4 Nullpunkt + links (Gyro), 5 Nullpunkt + rechts (Gyro). Das Feld `angleReference` im Profil hat dieselbe Bedeutung |
 | GET | `/api/token` | `{"token":"...","port":81}` |
 | GET | `/api/log` | letzte ca. 2 KB Log (text/plain) |
 | GET | `/api/export` | Einstellungen, Profile und Kalibrierung als JSON (ohne Passwörter) |

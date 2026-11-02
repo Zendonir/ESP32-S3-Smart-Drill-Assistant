@@ -286,6 +286,17 @@ void WebApi::hOrientation() {
     dv["lateralFree"] = u.lateralFree;
     dv["lateralFromGyro"] = u.lateralFromGyro;
     dv["targetAngleDeg"] = prof.targetAngleDeg;
+    dv["angleReference"] = static_cast<int>(prof.angleRef);
+    dv["angleReferenceName"] = angleReferenceName(prof.angleRef);
+    {
+        const AngleTargetResult at =
+            makeAngleTarget(prof.angleRef, prof.targetAngleDeg, st.measurement.hemisphere, s.reference, prof.mount);
+        dv["targetValid"] = at.valid;
+        dv["needsZero"] = at.needsZero;
+        dv["targetUsesGyro"] = at.usesGyro;
+        dv["targetElevationDeg"] = at.targetElevationDeg;
+        if (!at.valid) dv["problem"] = at.problem;
+    }
     dv["toleranceDeg"] = prof.toleranceDeg;
     JsonObject un = d["uncertaintyEstimate"].to<JsonObject>();
     un["tiltSigmaDeg"] = s.tiltSigmaDeg;
@@ -426,11 +437,12 @@ void WebApi::hReference() {
     if (!parseBody(*http_, d)) return sendError(400, "invalid_json", "JSON-Objekt erwartet");
     const char* t = d["type"] | "";
     if (!std::strcmp(t, "tilt")) app_.meas.captureTiltZero();
+    else if (!std::strcmp(t, "axis")) app_.meas.captureFull3D();  // reference axis for angle drilling
     else if (!std::strcmp(t, "3d")) app_.meas.captureFull3D();
     else if (!std::strcmp(t, "surface")) app_.meas.captureSurface(false);
     else if (!std::strcmp(t, "surface3d")) app_.meas.captureSurface(true);
     else if (!std::strcmp(t, "clear")) app_.meas.clearReference();
-    else return sendError(422, "invalid_value", "type: tilt|3d|surface|surface3d|clear");
+    else return sendError(422, "invalid_value", "type: tilt|3d|axis|surface|surface3d|clear");
     sendJson(200, "{\"ok\":true}");
 }
 
@@ -517,6 +529,11 @@ void WebApi::hTarget() {
         const float a = d["angle"].as<float>();
         if (!(a >= 0 && a <= 90)) return sendError(422, "invalid_value", "angle 0..90");
         p.targetAngleDeg = a;
+    }
+    if (!d["reference"].isNull()) {
+        const int r = d["reference"] | -1;
+        if (r < 0 || r >= int(AngleReference::Count)) return sendError(422, "invalid_value", "reference 0..5");
+        p.angleRef = static_cast<AngleReference>(r);
     }
     if (d["tolerance"].is<float>()) {
         const float t = d["tolerance"].as<float>();

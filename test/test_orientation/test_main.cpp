@@ -4,6 +4,7 @@
 
 #include "../support/SyntheticImu.h"
 #include "Orientation.h"
+#include "AngleTarget.h"
 #include "ReferenceManager.h"
 
 using namespace sda;
@@ -148,6 +149,72 @@ void test_relative_rotation_heading() {
     TEST_ASSERT_FLOAT_WITHIN(1e-2f, 5.0f, r.totalDeg);
 }
 
+static float totalFor(const AngleTargetResult& r, const Quat& q, const MountModel& mm) {
+    HemisphereState hs;
+    return drillDeviation(q, mm, r.target, hs).totalDeg;
+}
+
+void test_angle_target_absolute() {
+    MountModel mm;
+    ReferenceManager rm;
+    // 30 deg to the vertical == 60 deg to the horizontal
+    AngleTargetResult r = makeAngleTarget(AngleReference::Vertical, 30.0f, 0, rm, mm);
+    TEST_ASSERT_TRUE(r.valid);
+    TEST_ASSERT_FALSE(r.usesGyro);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, 60.0f, r.target.inclinationDeg);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), -60.0f, 123.0f), mm));
+    r = makeAngleTarget(AngleReference::Horizontal, 45.0f, -1, rm, mm);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), -45.0f, 10.0f), mm));
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 5.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), -40.0f, 10.0f), mm));
+}
+
+void test_angle_target_zero_up_down_is_gravity_based() {
+    MountModel mm;
+    ReferenceManager rm;
+    AngleTargetResult r = makeAngleTarget(AngleReference::ZeroDown, 45.0f, 0, rm, mm);
+    TEST_ASSERT_FALSE(r.valid);
+    TEST_ASSERT_TRUE(r.needsZero);
+    // zero point: axis horizontal (perpendicular to a wall), heading 0
+    const Quat q0 = orientationWithAxis(Vec3(0, 0, -1), 0.0f, 0.0f);
+    rm.captureTiltZero(q0.rotateInverse(Vec3::unitZ()), 0.05f);  // tilt zero is enough
+    r = makeAngleTarget(AngleReference::ZeroDown, 45.0f, 0, rm, mm);
+    TEST_ASSERT_TRUE(r.valid);
+    TEST_ASSERT_FALSE(r.usesGyro);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, -45.0f, r.targetElevationDeg);
+    // any heading is accepted (azimuth free), 45 deg down is on target
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), -45.0f, 77.0f), mm));
+    // too far: beyond the vertical
+    r = makeAngleTarget(AngleReference::ZeroUp, 45.0f, 0, rm, mm);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 45.0f, r.targetElevationDeg);
+    rm.captureTiltZero(orientationWithAxis(Vec3(0, 0, -1), 60.0f, 0.0f).rotateInverse(Vec3::unitZ()), 0.05f);
+    r = makeAngleTarget(AngleReference::ZeroUp, 45.0f, 0, rm, mm);
+    TEST_ASSERT_FALSE(r.valid);
+}
+
+void test_angle_target_zero_left_right_uses_gyro() {
+    MountModel mm;
+    ReferenceManager rm;
+    const Quat q0 = orientationWithAxis(Vec3(0, 0, -1), 0.0f, 0.0f);
+    rm.captureTiltZero(q0.rotateInverse(Vec3::unitZ()), 0.05f);
+    // tilt zero is NOT sufficient for left/right
+    AngleTargetResult r = makeAngleTarget(AngleReference::ZeroRight, 45.0f, 0, rm, mm);
+    TEST_ASSERT_FALSE(r.valid);
+    TEST_ASSERT_TRUE(r.needsZero);
+    rm.captureFull3D(q0, 0.05f);
+    r = makeAngleTarget(AngleReference::ZeroRight, 45.0f, 0, rm, mm);
+    TEST_ASSERT_TRUE(r.valid);
+    TEST_ASSERT_TRUE(r.usesGyro);
+    // right = negative heading
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), 0.0f, -45.0f), mm));
+    TEST_ASSERT_FLOAT_WITHIN(1e-2f, 90.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), 0.0f, 45.0f), mm));
+    r = makeAngleTarget(AngleReference::ZeroLeft, 30.0f, 0, rm, mm);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, totalFor(r, orientationWithAxis(Vec3(0, 0, -1), 0.0f, 30.0f), mm));
+    // vertical reference axis: left/right undefined
+    rm.captureFull3D(Quat::identity(), 0.05f);
+    r = makeAngleTarget(AngleReference::ZeroLeft, 30.0f, 0, rm, mm);
+    TEST_ASSERT_FALSE(r.valid);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_level_angles_flat_and_edge);
@@ -159,5 +226,8 @@ int main(int, char**) {
     RUN_TEST(test_drill_direction_target_lateral);
     RUN_TEST(test_surface_reference_restricted_vs_3d);
     RUN_TEST(test_relative_rotation_heading);
+    RUN_TEST(test_angle_target_absolute);
+    RUN_TEST(test_angle_target_zero_up_down_is_gravity_based);
+    RUN_TEST(test_angle_target_zero_left_right_uses_gyro);
     return UNITY_END();
 }

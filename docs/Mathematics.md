@@ -147,6 +147,17 @@ Zielarten:
 * **Hemisphäre** (bohren nach unten oder oben): automatisch mit Hysterese
   ±(β/2 + 2°) um die Horizontale, oder fest eingestellt.
 
+**Winkelbezug** (`AngleTarget.cpp`, Sollwinkel α):
+
+| Bezug | Ziel |
+|---|---|
+| Horizontale | Neigungsziel β = α |
+| Vertikale | Neigungsziel β = 90° − α |
+| Nullpunkt + oben/unten | ε_ref = asin(d_D·u_ref,D) + Korrektur aus dem gespeicherten Schwerkraftvektor, ε_t = ε_ref ± α. Daraus ein Neigungsziel mit Vorzeichen. Rein gravitationsbasiert, der Azimut ist frei. Bei \|ε_t\| > 90° ungültig |
+| Nullpunkt + links/rechts | Richtungsziel t = R_z(±α)·d_ref,W mit d_ref,W aus q_ref (3D-Nullpunkt). R_z(+α) dreht von oben gesehen nach links. Die Seitenkomponente ist gyrobasiert. Liegt d_ref näher als 10° am Lot, ist der Bezug undefiniert |
+
+Langes Drücken im Bohrmodus mit Nullpunkt-Bezug erfasst einen 3D-Nullpunkt. Er enthält auch den driftfreien Neigungsanteil, der für oben/unten genutzt wird.
+
 **Zielerkennung** (`TargetTracker`):
 
 * Innerhalb der Toleranz bei Eintritt ≤ tol, Austritt erst bei > tol·(1 + 0,25).

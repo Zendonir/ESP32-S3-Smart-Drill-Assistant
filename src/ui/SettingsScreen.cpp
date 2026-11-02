@@ -77,6 +77,13 @@ void UIManager::menuMeasurement() {
                              [this](int i) { setMode(static_cast<AppMode>(i)); }),
             MenuItem::number("Sollwinkel", 0, 90, 0.5f, 1, "°", [&pm, active] { return pm.get(active()).targetAngleDeg; },
                              [&pm, active](float v) { pm.update(active(), [v](Profile& p) { p.targetAngleDeg = v; }); }),
+            MenuItem::choice("Winkelbezug",
+                             "zur Horizontalen\nzur Vertikalen\nNullpunkt + oben\nNullpunkt + unten\n"
+                             "Nullpunkt + links\nNullpunkt + rechts",
+                             [&pm, active] { return static_cast<int>(pm.get(active()).angleRef); },
+                             [&pm, active](int i) {
+                                 pm.update(active(), [i](Profile& p) { p.angleRef = static_cast<AngleReference>(i); });
+                             }),
             MenuItem::number("Toleranz", 0.05f, 10, 0.05f, 2, "°", [&pm, active] { return pm.get(active()).toleranceDeg; },
                              [&pm, active](float v) { pm.update(active(), [v](Profile& p) { p.toleranceDeg = v; }); }),
             MenuItem::choice("Skala", "Grob ±20°\nNormal ±10°\nFein ±5°\nPräzision ±2°\nAutomatisch",

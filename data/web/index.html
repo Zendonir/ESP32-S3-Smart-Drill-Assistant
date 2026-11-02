@@ -43,10 +43,11 @@ progress{width:100%}pre{white-space:pre-wrap;font-size:12px;max-height:340px;ove
       <div class="big" id="lv">--</div><div class="row" style="justify-content:center"><span id="lxy" class="small"></span></div></div>
     <div class="card"><table id="lt"></table>
       <div class="row" style="margin-top:10px"><select id="mode"></select><button onclick="api('POST','/api/hold')">Hold</button></div>
-      <label>Sollwinkel / Toleranz (aktives Profil)</label>
-      <div class="row"><input id="tgA" type="number" min="0" max="90" step="0.5" style="width:45%"><input id="tgT" type="number" min="0.05" max="10" step="0.05" style="width:30%"><button onclick="setTarget()">Setzen</button></div>
+      <label>Sollwinkel / Bezug / Toleranz (aktives Profil)</label>
+      <div class="row"><input id="tgA" type="number" min="0" max="90" step="0.5" style="width:30%"><select id="tgR" style="width:45%"></select><input id="tgT" type="number" min="0.05" max="10" step="0.05" style="width:20%"><button onclick="setTarget()">Setzen</button></div>
+      <p class="small">Horizontale/Vertikale und Nullpunkt + oben/unten sind schwerkraftbasiert (driftfrei). Nullpunkt + links/rechts nutzt das Gyroskop und driftet.</p>
       <label>Referenz / Nullpunkt</label>
-      <div class="row"><button onclick="ref('tilt')">Neigung</button><button onclick="ref('3d')">3D</button><button onclick="ref('surface')">Fläche</button><button onclick="ref('surface3d')">Fläche 3D</button><button onclick="ref('clear')">Löschen</button></div>
+      <div class="row"><button onclick="ref('axis')">Bezugsachse</button><button onclick="ref('tilt')">Neigung</button><button onclick="ref('3d')">3D</button><button onclick="ref('surface')">Fläche</button><button onclick="ref('surface3d')">Fläche 3D</button><button onclick="ref('clear')">Löschen</button></div>
       <p class="small">Unsicherheiten sind modellbasierte Schätzungen. Drehung um die Lotrichtung ist mit 6-Achs-IMU nicht absolut messbar (Gyro, driftet).</p>
     </div>
   </div>
@@ -87,6 +88,7 @@ const $=id=>document.getElementById(id);let AUTH=sessionStorage.getItem('auth')|
 const MODES=['Bohrassistent','Wasserwaage','Winkelmesser','Nullpunkt','Referenzfläche','Präzision'];
 const TS=['ungültig','weit','nah','innen','im Ziel'],TSC=['--bad','--far','--near','--near','--ok'];
 const POSES=['+X','-X','+Y','-Y','+Z','-Z'];
+const AREF=['zur Horizontalen','zur Vertikalen','Nullpunkt + oben','Nullpunkt + unten','Nullpunkt + links (Gyro)','Nullpunkt + rechts (Gyro)'];
 function toast(m){const e=$('fwm');e.textContent=m;setTimeout(()=>{if(e.textContent==m)e.textContent=''},3000)}
 async function api(method,path,body){const o={method,headers:{'Authorization':'Basic '+AUTH}};
  if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
@@ -100,6 +102,7 @@ function tabs(){const n=$('tabs');document.querySelectorAll('section').forEach((
 function onTab(t){if(t=='Einstellungen')loadCfg();if(t=='Profile')loadProf();if(t=='Kalibrierung')loadCal();if(t=='System'){loadSys();loadLog()}}
 async function start(){$('login').classList.add('hide');$('app').classList.remove('hide');
  $('mode').innerHTML=MODES.map((m,i)=>`<option value=${i}>${m}</option>`).join('');$('mode').onchange=e=>api('POST','/api/mode',{mode:+e.target.value});
+ $('tgR').innerHTML=AREF.map((t,i)=>`<option value=${i}>${t}</option>`).join('');
  $('poses').innerHTML=POSES.map(p=>`<span>${p}</span>`).join('');
  const t=await api('GET','/api/token');connect(t);loadProf()}
 function connect(t){ws=new WebSocket(`ws://${location.hostname}:${t.port}/?t=${t.token}`);ws.onmessage=e=>{live=JSON.parse(e.data);render()};
@@ -125,7 +128,7 @@ function drawCross(){const c=$('cv'),x=c.getContext('2d'),W=c.width,R=W/2-14,L=l
  x.fillStyle=css('--dim');x.font='12px sans-serif';x.fillText('Skala ±'+sc+'°',8,W-6)}
 function drawHist(){const c=$('hc'),x=c.getContext('2d'),W=c.width,H=c.height;x.clearRect(0,0,W,H);if(hist.length<2)return;const m=Math.max(1,...hist.map(h=>h[0]));
  [[0,css('--acc'),m],[1,css('--far'),Math.max(10,...hist.map(h=>h[1]))]].forEach(([i,col,mx])=>{x.strokeStyle=col;x.beginPath();hist.forEach((h,j)=>{const X=j*W/300,Y=H-h[i]/mx*(H-8)-4;j?x.lineTo(X,Y):x.moveTo(X,Y)});x.stroke()})}
-async function setTarget(){const b={};if($('tgA').value!=='')b.angle=+$('tgA').value;if($('tgT').value!=='')b.tolerance=+$('tgT').value;await api('POST','/api/target',b);loadProf()}
+async function setTarget(){const b={reference:+$('tgR').value};if($('tgA').value!=='')b.angle=+$('tgA').value;if($('tgT').value!=='')b.tolerance=+$('tgT').value;await api('POST','/api/target',b);loadProf()}
 function ref(t){api('POST','/api/reference',{type:t})}
 // ---- settings form, generated from the configuration object
 const LABELS={filterStrength:['Filterstärke',[0,1,2,3,4]],fusion:['Sensorfusion',['Mahony','Komplementär','Madgwick']],precisionWindowSec:['Präzisions-Messdauer [s]'],
@@ -150,17 +153,18 @@ async function saveCfg(){const out={measurement:{},display:{},system:{}};for(con
  await api('PUT','/api/config',out);toast('Gespeichert');loadCfg()}
 // ---- profiles
 async function loadProf(){profs=await api('GET','/api/profiles');let h='<table>';profs.profiles.forEach((p,i)=>{if(!p.used)return;
- if(i==profs.active){$('tgA').value=p.targetAngleDeg;$('tgT').value=p.toleranceDeg}
- h+=`<tr><td><b>${p.name}</b>${i==profs.active?' (aktiv)':''}<br><span class=small>Soll ${p.targetAngleDeg}° ±${p.toleranceDeg}° · Achse ${p.mount.axis.map(v=>v.toFixed(3)).join(', ')} · Methode ${['Standard','Voreinst.','V-Nut','Ständer'][p.mount.method]}${p.mount.qualityDeg>=0?' · Rest '+p.mount.qualityDeg.toFixed(2)+'°':''}</span></td>
+ if(i==profs.active){$('tgA').value=p.targetAngleDeg;$('tgT').value=p.toleranceDeg;$('tgR').value=p.angleReference}
+ h+=`<tr><td><b>${p.name}</b>${i==profs.active?' (aktiv)':''}<br><span class=small>Soll ${p.targetAngleDeg}° ${AREF[p.angleReference]} ±${p.toleranceDeg}° · Achse ${p.mount.axis.map(v=>v.toFixed(3)).join(', ')} · Methode ${['Standard','Voreinst.','V-Nut','Ständer'][p.mount.method]}${p.mount.qualityDeg>=0?' · Rest '+p.mount.qualityDeg.toFixed(2)+'°':''}</span></td>
  <td><button onclick="editProf(${i})">Bearbeiten</button> <button onclick="api('POST','/api/profiles/${i}/activate').then(loadProf)">Aktiv</button> <button class=warn onclick="delProf(${i})">✕</button></td></tr>`});
  $('prof').innerHTML=h+'</table><div id="pedit"></div>'}
 function editProf(i){const p=profs.profiles[i];$('pedit').innerHTML=`<h3>Profil bearbeiten</h3><label>Name</label><input id=pn maxlength=20 value="${p.name}">
- <label>Sollwinkel [°]</label><input id=pa type=number value=${p.targetAngleDeg}><label>Toleranz [°]</label><input id=pt type=number step=0.05 value=${p.toleranceDeg}>
+ <label>Sollwinkel [°]</label><input id=pa type=number value=${p.targetAngleDeg}>
+ <label>Winkelbezug</label><select id=pr>${AREF.map((t,k)=>`<option value=${k} ${k==p.angleReference?'selected':''}>${t}</option>`).join('')}</select><label>Toleranz [°]</label><input id=pt type=number step=0.05 value=${p.toleranceDeg}>
  <label>Skala</label><select id=ps>${['±20°','±10°','±5°','±2°','Auto'].map((t,k)=>`<option value=${k} ${k==p.scale?'selected':''}>${t}</option>`).join('')}</select>
  <label>Winkelkorrektur [°]</label><input id=pc type=number step=0.01 value=${p.mount.angleCorrectionDeg}>
  <label>Punktdarstellung</label><select id=pi><option value=0>Achsposition</option><option value=1 ${p.invertMarker?'selected':''}>Libelle</option></select>
  <p><button class=pri onclick="saveProf(${i})">Speichern</button></p>`}
-async function saveProf(i){await api('PUT','/api/profiles/'+i,{name:$('pn').value,targetAngleDeg:+$('pa').value,toleranceDeg:+$('pt').value,scale:+$('ps').value,invertMarker:$('pi').value=='1',mount:{angleCorrectionDeg:+$('pc').value}});loadProf()}
+async function saveProf(i){await api('PUT','/api/profiles/'+i,{name:$('pn').value,targetAngleDeg:+$('pa').value,angleReference:+$('pr').value,toleranceDeg:+$('pt').value,scale:+$('ps').value,invertMarker:$('pi').value=='1',mount:{angleCorrectionDeg:+$('pc').value}});loadProf()}
 async function delProf(i){if(confirm('Profil löschen?')){await api('DELETE','/api/profiles/'+i);loadProf()}}
 async function newProfile(){const n=prompt('Name des Profils (max. 20 Zeichen)','Neues Profil');if(n){await api('POST','/api/profiles',{name:n});loadProf()}}
 // ---- calibration

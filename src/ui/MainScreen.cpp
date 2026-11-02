@@ -387,7 +387,10 @@ void MainScreen::updateHeader(const OrientationSnapshot& s, const PowerStatus& p
     char b[48];
     if (!hold_) {
         switch (mode_) {
-            case AppMode::Drill: snprintf(b, sizeof(b), "BOHREN %.4g°", double(profile_.targetAngleDeg)); break;
+            case AppMode::Drill:
+                snprintf(b, sizeof(b), "BOHREN %.4g° %s", double(profile_.targetAngleDeg),
+                         angleReferenceShort(profile_.angleRef));
+                break;
             case AppMode::Angle: snprintf(b, sizeof(b), "WINKEL soll %.4g°", double(profile_.targetAngleDeg)); break;
             default: snprintf(b, sizeof(b), "%s", appModeShort(mode_)); break;
         }
@@ -416,15 +419,42 @@ void MainScreen::updateHeader(const OrientationSnapshot& s, const PowerStatus& p
 }
 
 void MainScreen::updateDrill(const OrientationSnapshot& s, float dt) {
-    DrillTarget t;
-    t.kind = TargetKind::Inclination;
-    t.inclinationDeg = profile_.targetAngleDeg;
-    t.hemisphere = settings_.measurement.hemisphere;
-    const Deviation d = drillDeviation(s.qWD, profile_.mount, t, hemi_);
-    const bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
-    updateDeviationView(d.screenX, d.screenY, d.totalDeg, valid, profile_.toleranceDeg, dt, d.lateralFree, false);
+    const AngleTargetResult at = makeAngleTarget(profile_.angleRef, profile_.targetAngleDeg,
+                                                 settings_.measurement.hemisphere, s.reference, profile_.mount);
     const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
     status_.valueDeg = g.inclinationDeg;
+    if (!at.valid) {
+        // zero based angle without (suitable) zero point, or impossible target
+        layoutTarget(false);
+        hide(lblHint_, false);
+        if (at.needsZero)
+            lv_label_set_text(lblHint_, angleReferenceUsesGyro(profile_.angleRef)
+                                            ? "Bezugsachse ausrichten,\nlange drücken:\n3D-Nullpunkt setzen"
+                                            : "Bezugsachse ausrichten,\nlange drücken:\nNullpunkt setzen");
+        else
+            lv_label_set_text_fmt(lblHint_, "%s\nBezug %.1f°", at.problem, double(at.referenceElevationDeg));
+        lv_label_set_text(lblBig_, "");
+        lv_label_set_text_fmt(lblXY_, "Achse jetzt %+.1f°", double(g.elevationDeg));
+        lv_label_set_text(lblInfo_, angleReferenceName(profile_.angleRef));
+        tracker_.update(NAN, false, dt);
+        status_.targetState = TargetState::Invalid;
+        return;
+    }
+    hide(lblHint_, true);
+    layoutTarget(true);
+    const Deviation d = drillDeviation(s.qWD, profile_.mount, at.target, hemi_);
+    bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
+    const float hSigma = s.reference.info().headingSigmaDeg;
+    // gyro based left/right angle: green only while the heading uncertainty fits
+    if (at.usesGyro && 2.0f * hSigma > profile_.toleranceDeg) valid = false;
+    updateDeviationView(d.screenX, d.screenY, d.totalDeg, valid, profile_.toleranceDeg, dt, d.lateralFree,
+                        d.lateralFromGyro);
+    if (at.usesGyro)
+        lv_label_set_text_fmt(lblInfo_, "±%.2g°  Gyro ±%.1f°  %lus", double(profile_.toleranceDeg), double(hSigma),
+                              static_cast<unsigned long>(s.reference.info().ageSec));
+    else if (angleReferenceNeedsZero(profile_.angleRef))
+        lv_label_set_text_fmt(lblInfo_, "±%.2g°  Ziel %+.1f°", double(profile_.toleranceDeg),
+                              double(at.targetElevationDeg));
     pushHistory(d.screenX, d.screenY, d.totalDeg, s, dt);
 }
 
@@ -470,7 +500,9 @@ void MainScreen::updateAngle(const OrientationSnapshot& s, float dt) {
     layoutTarget(false);
     hide(chart_, !settings_.display.showHistory);
     const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
-    const float value = fv_.update(std::isfinite(angleRefDeg_) ? g.elevationDeg - angleRefDeg_ : g.inclinationDeg, dt);
+    const bool toVertical = profile_.angleRef == AngleReference::Vertical;
+    const float absValue = toVertical ? 90.0f - g.inclinationDeg : g.inclinationDeg;
+    const float value = fv_.update(std::isfinite(angleRefDeg_) ? g.elevationDeg - angleRefDeg_ : absValue, dt);
     const float diff = std::isfinite(angleRefDeg_) ? value : value - profile_.targetAngleDeg;
     const bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
     const TargetState st = tracker_.update(fabsf(diff), valid, dt);
@@ -482,8 +514,8 @@ void MainScreen::updateAngle(const OrientationSnapshot& s, float dt) {
     if (std::isfinite(angleRefDeg_)) snprintf(line, sizeof(line), "relativ zu %.1f°", double(angleRefDeg_));
     else snprintf(line, sizeof(line), "Soll %.4g°  Diff %s", double(profile_.targetAngleDeg), c);
     lv_label_set_text(lblXY_, line);
-    lv_label_set_text_fmt(lblInfo_, "±%.2g°  %s", double(profile_.toleranceDeg),
-                          g.elevationDeg >= 0 ? "aufwärts" : "abwärts");
+    lv_label_set_text_fmt(lblInfo_, "±%.2g°  %s  %s", double(profile_.toleranceDeg),
+                          g.elevationDeg >= 0 ? "aufwärts" : "abwärts", toVertical ? "z.Vert." : "z.Horiz.");
     // big value in the centre for this mode
     lv_obj_align(lblBig_, LV_ALIGN_CENTER, 0, -14);
     status_.valueDeg = value;
@@ -642,6 +674,15 @@ void MainScreen::primaryAction() {
     if (!app_) return;
     switch (mode_) {
         case AppMode::Drill:
+            if (angleReferenceNeedsZero(profile_.angleRef)) {
+                // angle relative to a zero point: capture the reference axis (3D zero
+                // contains the drift-free tilt part as well) and stay in drill mode
+                app_->meas.captureFull3D();
+                showToast("Bezugsachse gesetzt");
+                break;
+            }
+            // fall through: absolute angle -> classic zero point mode
+            [[fallthrough]];
         case AppMode::Zero:
             if (settings_.measurement.zeroKind == ZeroKind::Full3D) app_->meas.captureFull3D();
             else app_->meas.captureTiltZero();
