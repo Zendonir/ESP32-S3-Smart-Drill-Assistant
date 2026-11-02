@@ -1,0 +1,7 @@
+.pio/
+.vscode/
+!.vscode/extensions.json
+*.o
+*.bin
+__pycache__/
+include/WebAssets.h
