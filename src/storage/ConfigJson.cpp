@@ -161,6 +161,9 @@ bool settingsFromJson(JsonObjectConst o, AppSettings& out) {
         ok &= getStr(y, "password", s.system.password, sizeof(s.system.password));
         ok &= getStr(y, "apPassword", s.system.apPassword, sizeof(s.system.apPassword));
         ok &= getStr(y, "adminPassword", s.system.adminPassword, sizeof(s.system.adminPassword));
+        // credentials must never become empty/short through the API (WPA2 + auth need >= 8)
+        if (!y["apPassword"].isNull() && std::strlen(s.system.apPassword) < 8) ok = false;
+        if (!y["adminPassword"].isNull() && std::strlen(s.system.adminPassword) < 8) ok = false;
         ok &= getStr(y, "hostname", s.system.hostname, sizeof(s.system.hostname));
         ok &= getBool(y, "mdns", s.system.mdns);
         ok &= getNum(y, "sleepAfterMin", s.system.sleepAfterMin);

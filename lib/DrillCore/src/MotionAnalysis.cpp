@@ -137,6 +137,33 @@ void VibrationDetector::update(const Vec3& accelG, const Vec3& gyroDps, float dt
 }
 
 // ----------------------------------------------------------------------------
+const char* drillActivityName(DrillActivity a) {
+    switch (a) {
+        case DrillActivity::Holding: return "ruhig gehalten";
+        case DrillActivity::Aligning: return "wird ausgerichtet";
+        case DrillActivity::Vibrating: return "vibriert stark";
+        case DrillActivity::Settling: return "steht wieder";
+    }
+    return "?";
+}
+
+DrillActivity DrillActivityTracker::update(MotionState m, VibrationLevel v, float dt) {
+    if (v == VibrationLevel::Strong) {
+        state_ = DrillActivity::Vibrating;
+        sinceVibration_ = 0.0f;
+        return state_;
+    }
+    sinceVibration_ += dt;
+    if (m == MotionState::Still) {
+        // "settled" for 3 s after a vibration phase, then plain holding
+        state_ = sinceVibration_ < 3.0f ? DrillActivity::Settling : DrillActivity::Holding;
+    } else {
+        state_ = DrillActivity::Aligning;
+    }
+    return state_;
+}
+
+// ----------------------------------------------------------------------------
 float accelTrust(const AccelTrustConfig& c, float normDevG, float vibRmsMg, float rateDps,
                  bool clipped) {
     if (clipped) return 0.0f;

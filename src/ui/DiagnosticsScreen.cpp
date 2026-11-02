@@ -106,6 +106,7 @@ void DiagnosticsScreen::update() {
     add("Neig.-Unsich. ±%.3f° (Schätz.)\n", double(s.tiltSigmaDeg));
     add("Richt.-Unsich. ±%.2f°\n", double(s.headingSigmaDeg));
     add("Bewegung %s  %.1f s\n", motionStateName(s.motion), double(s.stillSec));
+    add("Werkzeug: %s (nur IMU)\n", drillActivityName(s.activity));
     add("Vibration %s %.0f mg\n", vibrationLevelName(s.vibration), double(s.vibrationRmsMg));
     add("Qualität %s\nFlags 0x%05lX\n", qualityStateName(s.quality.state), static_cast<unsigned long>(s.quality.flags));
     add("-- System --\n");

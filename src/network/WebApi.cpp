@@ -94,7 +94,7 @@ bool WebApi::auth() {
         return false;
     }
     const AppSettings s = app_.settings.get();
-    if (http_->authenticate("admin", s.system.adminPassword)) {
+    if (std::strlen(s.system.adminPassword) >= 8 && http_->authenticate("admin", s.system.adminPassword)) {
         recentFailures_ = 0;
         return true;
     }
@@ -245,6 +245,7 @@ void WebApi::hImu() {
     d["vibrationRmsMg"] = s.vibrationRmsMg;
     d["vibrationLevel"] = static_cast<int>(s.vibration);
     d["motion"] = static_cast<int>(s.motion);
+    d["activity"] = drillActivityName(s.activity);
     d["accelNoiseG"] = s.accelNoiseG;
     String out;
     serializeJson(d, out);

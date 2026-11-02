@@ -231,7 +231,7 @@ void UIManager::applySettings(bool initial) {
         theme::apply(settings_.display.theme, settings_.display.colorMode);
         lv_obj_t* oldScr = main_.obj();
         const AppMode m = main_.mode();
-        main_ = MainScreen();
+        // rebuild in place (a temporary MainScreen would not fit on the UI task stack)
         main_.create(*app_);
         lv_obj_add_event_cb(main_.obj(), mainEvent, LV_EVENT_ALL, this);
         main_.setSettings(settings_);

@@ -97,6 +97,9 @@ void SettingsManager::update(const std::function<void(sda::AppSettings&)>& fn) {
     xSemaphoreTake(mutex_, portMAX_DELAY);
     fn(s_);
     sda::validateSettings(s_);
+    // validation empties invalid credentials -> never leave them empty (open access)
+    if (s_.system.apPassword[0] == '\0') randomPassword(s_.system.apPassword, 10);
+    if (s_.system.adminPassword[0] == '\0') randomPassword(s_.system.adminPassword, 10);
     dirty_ = true;
     dirtySinceMs_ = millis();
     version_ = version_ + 1;

@@ -131,6 +131,15 @@ void test_timing_fallback_to_host_time() {
     TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.00446f, st.dtSec);
 }
 
+void test_drill_activity() {
+    DrillActivityTracker t;
+    TEST_ASSERT_EQUAL(int(DrillActivity::Aligning), int(t.update(MotionState::Slow, VibrationLevel::None, 0.1f)));
+    TEST_ASSERT_EQUAL(int(DrillActivity::Vibrating), int(t.update(MotionState::Fast, VibrationLevel::Strong, 0.1f)));
+    TEST_ASSERT_EQUAL(int(DrillActivity::Settling), int(t.update(MotionState::Still, VibrationLevel::None, 0.1f)));
+    for (int i = 0; i < 40; ++i) t.update(MotionState::Still, VibrationLevel::None, 0.1f);
+    TEST_ASSERT_EQUAL(int(DrillActivity::Holding), int(t.state()));
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_still_detected_after_hold_time);
@@ -139,5 +148,6 @@ int main(int, char**) {
     RUN_TEST(test_accel_trust);
     RUN_TEST(test_timing_counter_mode_and_loss);
     RUN_TEST(test_timing_fallback_to_host_time);
+    RUN_TEST(test_drill_activity);
     return UNITY_END();
 }

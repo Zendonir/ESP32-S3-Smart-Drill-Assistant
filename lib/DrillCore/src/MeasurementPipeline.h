@@ -92,6 +92,7 @@ struct OrientationSnapshot {
     MotionState motion = MotionState::Fast;
     float stillSec = 0.0f;
     VibrationLevel vibration = VibrationLevel::None;
+    DrillActivity activity = DrillActivity::Aligning;
     float vibrationRmsMg = 0.0f;
     float vibrationPeakMg = 0.0f;
     float accelTrust = 0.0f;
@@ -178,6 +179,7 @@ private:
     UncertaintyModel unc_;
     MotionDetector motion_;
     VibrationDetector vib_;
+    DrillActivityTracker activity_;
     ReferenceManager ref_;
     GyroCalibrator gyroCal_;
     AccelCalibrator accelCal_;

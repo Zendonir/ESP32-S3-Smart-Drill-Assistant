@@ -234,6 +234,7 @@ bool MeasurementPipeline::process(const ImuSample& raw) {
     s.motion = motion_.state();
     s.stillSec = motion_.stillSeconds();
     s.vibration = vib_.level();
+    s.activity = activity_.update(motion_.state(), vib_.level(), dt);
     s.vibrationRmsMg = vib_.rmsMg();
     s.vibrationPeakMg = vib_.peakMg();
     s.accelTrust = trust;

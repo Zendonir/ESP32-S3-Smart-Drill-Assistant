@@ -101,6 +101,26 @@ private:
     VibrationLevel level_ = VibrationLevel::None;
 };
 
+/// Activity of the tool derived ONLY from IMU data (requirement 7.4). This is an
+/// interpretation of motion/vibration - it does not detect the motor state.
+enum class DrillActivity : uint8_t {
+    Holding = 0,     ///< still, no vibration
+    Aligning = 1,    ///< moving without vibration
+    Vibrating = 2,   ///< strong vibration (e.g. drilling)
+    Settling = 3,    ///< vibration ended recently, back to still
+};
+const char* drillActivityName(DrillActivity a);
+
+class DrillActivityTracker {
+public:
+    DrillActivity update(MotionState m, VibrationLevel v, float dt);
+    DrillActivity state() const { return state_; }
+
+private:
+    DrillActivity state_ = DrillActivity::Aligning;
+    float sinceVibration_ = 1e6f;
+};
+
 /// Trust in the accelerometer as gravity reference (0..1). Combines |a|-deviation,
 /// vibration RMS, rotation rate (centripetal/tangential accelerations) and clipping.
 struct AccelTrustConfig {
