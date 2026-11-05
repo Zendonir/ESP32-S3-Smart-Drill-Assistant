@@ -188,11 +188,11 @@ Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten
 
 | Modus | Anzeige relativ zum temporären Bezug |
 |---|---|
-| Wasserwaage, Nullpunkt | Neigung gegenüber der Lage beim Doppeltippen |
+| Wasserwaage, Nullpunkt | Neigung gegenüber der Lage beim Setzen |
 | Bohren | Abweichung der Achsneigung (Elevation). Seitliche Richtung ist ohne Kompass nicht beobachtbar und bleibt frei; Drehen um die Bohrachse ist kein Fehler |
-| Referenzfläche | Lage beim Doppeltippen als Fläche (nur Neigung) |
-| Winkelmesser | Winkel relativ zur Achse beim Doppeltippen |
-| Präzision | Messwert minus Achsneigung beim Doppeltippen |
+| Referenzfläche | Lage beim Setzen als Fläche (nur Neigung) |
+| Winkelmesser | Winkel relativ zur Achse beim Setzen |
+| Präzision | Messwert minus Achsneigung beim Setzen |
 
 ### Flächenwinkel (Winkel zwischen zwei Flächen)
 
