@@ -108,9 +108,13 @@ void MainScreen::create(AppContext& app) {
     arrow_ = makeLine(scr_, arrowPts_, 3, p.far, 5);
     hide(arrow_, true);
 
-    holdRing_ = theme::circle(scr_, 236, p.hold, 4, false);
+    holdRing_ = theme::circle(scr_, 224, p.hold, 4, false);
     lv_obj_center(holdRing_);
     hide(holdRing_, true);
+    // temporary reference: red ring along the display edge
+    tempRing_ = theme::circle(scr_, 238, p.far, 6, false);
+    lv_obj_center(tempRing_);
+    hide(tempRing_, true);
 
     // text
     lblMode_ = theme::label(scr_, theme::small(), p.dim, "");
@@ -464,13 +468,14 @@ void MainScreen::updateDrill(const OrientationSnapshot& s, float dt) {
 
 void MainScreen::updateLevel(const OrientationSnapshot& s, float dt) {
     const LevelAngles& l = s.level;
-    const bool rel = s.reference.kind() == ReferenceKind::TiltZero;
+    const ReferenceManager& ref = tempActive_ ? tempTilt_ : s.reference;
+    const bool rel = ref.kind() == ReferenceKind::TiltZero;
     const bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
     if (l.flat || rel) {
         hide(edgeLine_, true);
         layoutTarget(true);
         float x = l.tiltXDeg, y = l.tiltYDeg;
-        if (rel) relativeTilt(s.reference.tiltZeroUpD(), s.upD, x, y);
+        if (rel) relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
         if (s.upD.z < 0 && !rel) { x = -x; }  // face down: mirror so the bubble still rises
         // bubble rises to the high side: right edge up -> bubble right
         const float total = sqrtf(x * x + y * y);
@@ -505,18 +510,19 @@ void MainScreen::updateAngle(const OrientationSnapshot& s, float dt) {
     layoutTarget(false);
     hide(chart_, !settings_.display.showHistory);
     const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
+    const float refDeg = tempActive_ ? tempElevDeg_ : angleRefDeg_;
     const bool toVertical = profile_.angleRef == AngleReference::Vertical;
     const float absValue = toVertical ? 90.0f - g.inclinationDeg : g.inclinationDeg;
-    const float value = fv_.update(std::isfinite(angleRefDeg_) ? g.elevationDeg - angleRefDeg_ : absValue, dt);
-    const float diff = std::isfinite(angleRefDeg_) ? value : value - profile_.targetAngleDeg;
+    const float value = fv_.update(std::isfinite(refDeg) ? g.elevationDeg - refDeg : absValue, dt);
+    const float diff = std::isfinite(refDeg) ? value : value - profile_.targetAngleDeg;
     const bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
     const TargetState st = tracker_.update(fabsf(diff), valid, dt);
     char b[32], c[32], line[64];
-    fmtAngle(b, sizeof(b), valid ? nBig_.update(value) : NAN, std::isfinite(angleRefDeg_));
+    fmtAngle(b, sizeof(b), valid ? nBig_.update(value) : NAN, std::isfinite(refDeg));
     lv_label_set_text(lblBig_, b);
     lv_obj_set_style_text_color(lblBig_, hold_ ? theme::pal().hold : (valid ? theme::targetColor(st) : theme::pal().invalid), 0);
     fmtAngle(c, sizeof(c), valid ? diff : NAN, true);
-    if (std::isfinite(angleRefDeg_)) snprintf(line, sizeof(line), "relativ zu %.1f°", double(angleRefDeg_));
+    if (std::isfinite(refDeg)) snprintf(line, sizeof(line), "relativ zu %.1f°", double(refDeg));
     else snprintf(line, sizeof(line), "Soll %.4g°  Diff %s", double(profile_.targetAngleDeg), c);
     lv_label_set_text(lblXY_, line);
     lv_label_set_text_fmt(lblInfo_, "±%.2g°  %s  %s", double(profile_.toleranceDeg),
@@ -535,7 +541,8 @@ void MainScreen::updateAngle(const OrientationSnapshot& s, float dt) {
 }
 
 void MainScreen::updateZero(const OrientationSnapshot& s, float dt) {
-    const ReferenceKind k = s.reference.kind();
+    const ReferenceManager& ref = tempActive_ ? tempTilt_ : s.reference;
+    const ReferenceKind k = ref.kind();
     const bool have = k == ReferenceKind::TiltZero || k == ReferenceKind::Full3D;
     if (!have) {
         layoutTarget(false);
@@ -550,15 +557,15 @@ void MainScreen::updateZero(const OrientationSnapshot& s, float dt) {
     hide(lblHint_, true);
     layoutTarget(true);
     float x, y;
-    relativeTilt(s.reference.tiltZeroUpD(), s.upD, x, y);
+    relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
     const float tilt = sqrtf(x * x + y * y);
     bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
     float total = tilt;
     float heading = 0, hSigma = 0;
     if (k == ReferenceKind::Full3D) {
-        const RelativeRotation r = relativeRotation(s.reference.orientationRef(), s.qWD);
+        const RelativeRotation r = relativeRotation(ref.orientationRef(), s.qWD);
         heading = r.headingDeg;
-        hSigma = s.reference.info().headingSigmaDeg;
+        hSigma = ref.info().headingSigmaDeg;
         total = sqrtf(tilt * tilt + heading * heading);
         // a green indication requires the heading uncertainty to fit the tolerance
         if (2.0f * hSigma > profile_.toleranceDeg) valid = false;
@@ -572,7 +579,8 @@ void MainScreen::updateZero(const OrientationSnapshot& s, float dt) {
 }
 
 void MainScreen::updateReference(const OrientationSnapshot& s, float dt) {
-    const ReferenceKind k = s.reference.kind();
+    const ReferenceManager& ref = tempActive_ ? tempSurf_ : s.reference;
+    const ReferenceKind k = ref.kind();
     const bool have = k == ReferenceKind::SurfaceRestricted || k == ReferenceKind::Surface3D;
     if (!have) {
         layoutTarget(false);
@@ -586,8 +594,8 @@ void MainScreen::updateReference(const OrientationSnapshot& s, float dt) {
     }
     hide(lblHint_, true);
     layoutTarget(true);
-    const ReferenceInfo& ri = s.reference.info();
-    const DrillTarget t = s.reference.surfaceTarget();
+    const ReferenceInfo& ri = ref.info();
+    const DrillTarget t = ref.surfaceTarget();
     const Deviation d = drillDeviation(s.qWD, profile_.mount, t, hemi_);
     bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
     if (d.lateralFromGyro && 2.0f * ri.headingSigmaDeg > profile_.toleranceDeg) valid = false;
@@ -631,7 +639,9 @@ void MainScreen::updatePrecision(const OrientationSnapshot& s, float) {
     hide(lblHint_, true);
     const PrecisionResult& r = s.precision;
     lv_obj_align(lblBig_, LV_ALIGN_CENTER, 0, -10);
-    lv_label_set_text_fmt(lblBig_, "%.2f°", double(r.valueDeg));
+    const bool relP = tempActive_ && std::isfinite(tempInclDeg_);
+    const float shown = relP ? r.valueDeg - tempInclDeg_ : r.valueDeg;
+    lv_label_set_text_fmt(lblBig_, relP ? "%+.2f°" : "%.2f°", double(shown));
     lv_obj_set_style_text_color(lblBig_, r.stable ? theme::pal().ok : theme::pal().warn, 0);
     lv_label_set_text_fmt(lblXY_, "Rauschen σ %.3f°  n %lu", double(r.stdDeg), static_cast<unsigned long>(r.samples));
     if (repeat_.count() >= 2)
@@ -640,7 +650,8 @@ void MainScreen::updatePrecision(const OrientationSnapshot& s, float) {
     else
         lv_label_set_text_fmt(lblInfo_, "%s  Drift %.3f°/s", r.stable ? "stabil" : "instabil",
                               double(r.slopeDegPerS));
-    status_.valueDeg = r.valueDeg;
+    if (relP) lv_label_set_text_fmt(lblInfo_, "relativ zu %.2f°", double(tempInclDeg_));
+    status_.valueDeg = shown;
 }
 
 void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, float dt) {
@@ -665,7 +676,11 @@ void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, floa
     if (mode_ != AppMode::Zero && mode_ != AppMode::Reference && mode_ != AppMode::Precision) hide(lblHint_, true);
     lv_obj_align(lblBig_, LV_ALIGN_CENTER, 0, 46);
     switch (mode_) {
-        case AppMode::Drill: layoutTarget(true); updateDrill(s, dt); break;
+        case AppMode::Drill:
+            layoutTarget(true);
+            if (tempActive_) updateTempDrill(s, dt);
+            else updateDrill(s, dt);
+            break;
         case AppMode::Level: updateLevel(s, dt); break;
         case AppMode::Angle: updateAngle(s, dt); break;
         case AppMode::Zero: updateZero(s, dt); break;
@@ -732,4 +747,63 @@ void MainScreen::primaryAction() {
             break;
         default: break;
     }
+}
+
+bool MainScreen::toggleTempReference() {
+    if (!app_) return false;
+    if (tempActive_) {
+        tempActive_ = false;
+        hide(tempRing_, true);
+        tracker_.reset();
+        fx_.reset();
+        fy_.reset();
+        fv_.reset();
+        showToast("Original-Bezug");
+        return false;
+    }
+    OrientationSnapshot s;
+    app_->meas.snapshot(s);
+    if (!s.valid || !s.upD.isFinite()) {
+        showToast("Keine Messwerte");
+        return false;
+    }
+    tempTilt_.captureTiltZero(s.upD, s.tiltSigmaDeg);
+    tempSurf_.captureSurface(s.qWD, false, s.tiltSigmaDeg);
+    const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
+    tempElevDeg_ = g.elevationDeg;
+    tempInclDeg_ = g.inclinationDeg;
+    tempActive_ = true;
+    hide(tempRing_, false);
+    tracker_.reset();
+    fx_.reset();
+    fy_.reset();
+    fv_.reset();
+    history_.clear();
+    showToast(s.motion == MotionState::Still ? "Temporärer Bezug" : "Temp. Bezug (bewegt!)");
+    return true;
+}
+
+void MainScreen::updateTempDrill(const OrientationSnapshot& s, float dt) {
+    // keep the axis elevation of the double tap; azimuth is not observable with
+    // gravity alone, so the lateral direction stays free (shown as such)
+    const AngleTargetResult at = makeAngleTarget(AngleReference::ZeroUp, 0.0f, 0, tempTilt_, profile_.mount);
+    const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
+    status_.valueDeg = g.elevationDeg - tempElevDeg_;
+    if (!at.valid) {
+        layoutTarget(false);
+        hide(lblHint_, false);
+        lv_label_set_text_fmt(lblHint_, "%s", at.problem);
+        lv_label_set_text(lblBig_, "");
+        lv_label_set_text(lblXY_, "");
+        tracker_.update(NAN, false, dt);
+        status_.targetState = TargetState::Invalid;
+        return;
+    }
+    hide(lblHint_, true);
+    layoutTarget(true);
+    const Deviation d = drillDeviation(s.qWD, profile_.mount, at.target, hemi_);
+    const bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
+    updateDeviationView(d.screenX, d.screenY, d.totalDeg, valid, profile_.toleranceDeg, dt, d.lateralFree, false);
+    lv_label_set_text_fmt(lblInfo_, "±%.2g°  Bezug %+.1f°", double(profile_.toleranceDeg), double(tempElevDeg_));
+    pushHistory(d.screenX, d.screenY, d.totalDeg, s, dt);
 }

@@ -7,7 +7,7 @@
 //   tap            -> quick menu
 //   swipe left/right -> previous / next operating mode
 //   long press     -> zero point / capture (mode dependent)
-//   double tap     -> hold on/off
+//   double tap     -> temporary reference on/off (red ring) or hold (setting)
 //   BOOT short     -> configurable (hold, zero, next mode, touch lock)
 //   BOOT long      -> touch lock on/off
 // Swipes are ignored while vibration is detected or the touch lock is active

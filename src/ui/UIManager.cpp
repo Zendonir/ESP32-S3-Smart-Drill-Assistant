@@ -623,7 +623,14 @@ void UIManager::onTap() {
     lv_timer_set_repeat_count(tapTimer_, 1);
 }
 
-void UIManager::onDoubleTap() { toggleHold(); }
+void UIManager::onDoubleTap() {
+    if (settings_.system.doubleTap == 1 || hold_) {
+        toggleHold();
+        return;
+    }
+    const bool on = main_.toggleTempReference();
+    LOGI(TAG, "temporary reference %s", on ? "on" : "off");
+}
 
 void UIManager::onLongPress() {
     if (hold_) {

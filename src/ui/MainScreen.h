@@ -37,6 +37,12 @@ public:
     /// Per frame update with the newest snapshot (ignored while hold is active).
     void update(const sda::OrientationSnapshot& s, const PowerStatus& p, float dt);
     void setHold(bool on);
+    /// Temporary reference (double tap): the current position becomes the zero of
+    /// every mode, marked by a red outer ring. Calling it again restores the
+    /// original reference. Gravity based (drift free); the stored references of
+    /// the measurement service are not touched. Returns the new state.
+    bool toggleTempReference();
+    bool tempReference() const { return tempActive_; }
     bool hold() const { return hold_; }
     /// Long press action of the current mode (zero / capture / start).
     void primaryAction();
@@ -65,6 +71,7 @@ private:
     lv_obj_t* arrow_ = nullptr;
     lv_obj_t* edgeLine_ = nullptr;
     lv_obj_t* holdRing_ = nullptr;
+    lv_obj_t* tempRing_ = nullptr;
     lv_obj_t* progress_ = nullptr;
     lv_obj_t* chart_ = nullptr;
     lv_chart_series_t* series_ = nullptr;
@@ -99,6 +106,13 @@ private:
     sda::RingBuffer<HistPoint, 600> history_;
     float histAccum_ = 0.0f;
     float angleRefDeg_ = NAN;      ///< angle mode: relative reference (NaN = absolute)
+    // temporary reference (double tap)
+    bool tempActive_ = false;
+    sda::ReferenceManager tempTilt_;   ///< gravity direction at the double tap
+    sda::ReferenceManager tempSurf_;   ///< same position as reference surface (tilt only)
+    float tempElevDeg_ = NAN;          ///< drill axis elevation at the double tap
+    float tempInclDeg_ = NAN;          ///< drill axis inclination at the double tap
+    void updateTempDrill(const sda::OrientationSnapshot& s, float dt);
     sda::RepeatabilityTracker repeat_;
     uint32_t lastPrecisionSeq_ = 0;
     int lastTargetState_ = -1;

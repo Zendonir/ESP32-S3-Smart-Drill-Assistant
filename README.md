@@ -92,7 +92,7 @@ Die Bibliotheken sind auf exakte Versionen festgelegt, siehe [docs/Dependencies.
 | Tippen | Schnellmenü: Sollwinkel, Toleranz, Skala, Hold, Nullpunkt/Speichern, Sperre, Profil, Menü |
 | Wischen links/rechts | Modus wechseln (bei Vibration oder Touchsperre ignoriert) |
 | Lange drücken | Nullpunkt setzen, Fläche erfassen oder Präzisionsmessung starten (je nach Modus). Bei aktivem Hold wird der Wert gespeichert |
-| Doppeltippen | Hold an/aus |
+| Doppeltippen | **Temporärer Bezug**: die aktuelle Lage wird zum neuen Nullpunkt aller Modi, ein **roter Ring** am Displayrand zeigt das an. Nochmal doppelt tippen → zurück zum Original-Bezug. Alternativ Hold (*System › Doppeltippen*) |
 | BOOT kurz | konfigurierbar (Hold, Nullpunkt, nächster Modus, Touchsperre) |
 | BOOT doppelt | Touchsperre an/aus. Entsperren alternativ durch 2,5 s Halten auf dem Display |
 | BOOT 3 s halten | **Ausschalten**: Countdown-Ring, Loslassen bricht ab. Danach Anzeige „Aus“ mit Ladestand |
@@ -181,3 +181,15 @@ Weitere Dokumente:
 Eigener Code: MIT. Die Bibliotheken behalten ihre eigenen Lizenzen
 (LVGL MIT, LovyanGFX FreeBSD, ArduinoJson MIT, arduinoWebSockets LGPL-2.1, Arduino-ESP32 LGPL-2.1).
 Die Schriften sind aus Montserrat (OFL) und FontAwesome (OFL/MIT) mit `lv_font_conv` erzeugt.
+
+### Temporärer Bezug (Doppeltippen)
+
+Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten Nullpunkte und Referenzflächen bleiben unverändert; der Bezug gilt bis zum nächsten Doppeltippen oder Neustart.
+
+| Modus | Anzeige relativ zum temporären Bezug |
+|---|---|
+| Wasserwaage, Nullpunkt | Neigung gegenüber der Lage beim Doppeltippen |
+| Bohren | Abweichung der Achsneigung (Elevation). Seitliche Richtung ist ohne Kompass nicht beobachtbar und bleibt frei; Drehen um die Bohrachse ist kein Fehler |
+| Referenzfläche | Lage beim Doppeltippen als Fläche (nur Neigung) |
+| Winkelmesser | Winkel relativ zur Achse beim Doppeltippen |
+| Präzision | Messwert minus Achsneigung beim Doppeltippen |
