@@ -31,6 +31,8 @@ jobs:
           path: ~/.platformio
           key: pio-${{ hashFiles('platformio.ini') }}
       - run: pip install platformio==6.2.0
+      - name: Font/LVGL render check (host)
+        run: scripts/check_fonts.sh
       - name: Unit tests (host)
         run: pio test -e native
       - name: Build firmware

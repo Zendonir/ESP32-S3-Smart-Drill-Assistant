@@ -92,6 +92,7 @@ private:
     void showGoodbye();
     std::string batteryText(bool longForm);
     void menuBattery();
+    void showColorTest();
 
     // main screen events
     static void mainEvent(lv_event_t* e);

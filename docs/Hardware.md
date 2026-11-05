@@ -55,8 +55,11 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
 2. **Serielles Log** (`pio device monitor`). Es muss `QMI8658 at 0x6B`,
    `CST816S chip 0xB?` und `GC9A01 240x240` erscheinen. Erkennt die Firmware ein Bauteil
    nicht, meldet sie das im Startbildschirm und im Log.
-3. **Displayfarben.** Der Hintergrund ist schwarz und Grün ist grün. Sind die Farben
-   invertiert, `kLcdInvertColors` in `BoardConfig.h` umschalten.
+3. **Displayfarben.** Einstellungen › System › **Farbtest** zeigt Balken in Schwarz, Grau 12 %, Grau 38 %, Weiß, Rot, Grün und Blau.
+   Mit bloßem Auge prüfen (Kamerafotos verfälschen dunkle Töne):
+   * Schwarz muss schwarz sein und Weiß weiß. Sind die beiden vertauscht, `kLcdInvertColors` in `BoardConfig.h` umschalten.
+   * Rot und Blau müssen stimmen. Sind sie vertauscht, `cfg.rgb_order` in `src/hardware/DisplayDriver.cpp` umschalten.
+   * Grau 12 % muss deutlich dunkler sein als Grau 38 %.
 4. **Touch.** Diagnose › „Touch x/y“ zeigt die Koordinate unter dem Finger
    (oben links ≈ 0/0). Stimmt sie nicht, `kTouchSwapXY`/`kTouchInvertX/Y` anpassen.
 5. **IMU-Achsen.** Das Gerätekoordinatensystem ist X = rechts, Y = oben,

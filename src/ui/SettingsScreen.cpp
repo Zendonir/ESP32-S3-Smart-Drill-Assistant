@@ -9,6 +9,7 @@
 #include "../system/OtaGuard.h"
 #include "../system/SystemTask.h"
 #include "MeasurementPipeline.h"
+#include "Theme.h"
 #include "UIManager.h"
 #include "Version.h"
 
@@ -318,6 +319,7 @@ void UIManager::menuSystem() {
             MenuItem::act("Sensorstatus", [this] { openDiagnostics(); },
                           [this] { return std::string(app_->imu.isHealthy() ? "ok" : "FEHLER"); }),
             MenuItem::act("Diagnose", [this] { openDiagnostics(); }),
+            MenuItem::act("Farbtest", [this] { showColorTest(); }),
             MenuItem::choice("Einschalten", "BOOT kurz drücken\nBOOT 1 s halten",
                              [&sm] { return sm.get().system.powerOnHold ? 1 : 0; },
                              [&sm](int i) { sm.update([i](AppSettings& s) { s.system.powerOnHold = i == 1; }); }),
@@ -365,6 +367,45 @@ void UIManager::menuSystem() {
 }
 
 // ---------------------------------------------------------------------------
+// Colour test pattern to verify the panel configuration on the real hardware
+// (inversion, RGB order, black level). Tap anywhere to close.
+void UIManager::showColorTest() {
+    lv_obj_t* o = lv_obj_create(lv_layer_top());
+    lv_obj_remove_style_all(o);
+    lv_obj_set_size(o, 240, 240);
+    lv_obj_set_style_bg_color(o, lv_color_hex(0x000000), 0);
+    lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
+    lv_obj_add_flag(o, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
+    struct Bar {
+        uint32_t rgb;
+        const char* name;
+        uint32_t text;
+    };
+    static const Bar bars[] = {
+        {0x000000, "Schwarz", 0xFFFFFF}, {0x202020, "Grau 12%", 0xFFFFFF}, {0x606060, "Grau 38%", 0xFFFFFF},
+        {0xFFFFFF, "Weiß", 0x000000},    {0xFF0000, "Rot", 0xFFFFFF},      {0x00FF00, "Grün", 0x000000},
+        {0x0000FF, "Blau", 0xFFFFFF},
+    };
+    const int n = sizeof(bars) / sizeof(bars[0]);
+    const int h = 180 / n;
+    for (int i = 0; i < n; ++i) {
+        lv_obj_t* b = lv_obj_create(o);
+        lv_obj_remove_style_all(b);
+        lv_obj_set_size(b, 240, h);
+        lv_obj_set_pos(b, 0, 30 + i * h);
+        lv_obj_set_style_bg_color(b, lv_color_hex(bars[i].rgb), 0);
+        lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+        lv_obj_clear_flag(b, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* l = theme::label(b, theme::small(), lv_color_hex(bars[i].text), bars[i].name);
+        lv_obj_center(l);
+    }
+    lv_obj_t* hint = theme::label(o, theme::small(), lv_color_hex(0xFFFFFF), "Tippen = schließen");
+    lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, -8);
+    lv_obj_add_event_cb(o, [](lv_event_t* e) { lv_obj_del_async(lv_event_get_current_target(e)); }, LV_EVENT_CLICKED,
+                        nullptr);
+}
+
 void UIManager::menuBattery() {
     auto ps = [this] {
         PowerStatus p;

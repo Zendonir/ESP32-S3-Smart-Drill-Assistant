@@ -5,6 +5,7 @@
 ```bash
 pio test -e native                # PlatformIO + Unity
 scripts/run_host_tests.sh         # g++ -Werror, AddressSanitizer + UBSan
+scripts/check_fonts.sh            # LVGL mit der Firmware-lv_conf.h auf dem Host: Text in jeder Schrift muss Pixel erzeugen
 ```
 
 77 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
