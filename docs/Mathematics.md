@@ -93,10 +93,10 @@ meldet die Firmware „Referenz evtl. gedriftet“.
 
 ## 4. Stillstand, Bewegung, Vibration
 
-* **Stillstand:** Alle Bedingungen müssen 0,6 s lang gelten:
-  * |ω| < max(0,8 °/s; 5·σ_Gyro)
-  * Kurzzeit-Std von a (EMA, τ = 0,25 s) < max(4 mg; 4·σ_a)
-  * |‖a‖−1| < 0,03 g
+* **Stillstand:** Die Kriterien sind unabhängig von einer Kalibrierung, denn die Kalibrierungen selbst brauchen den Stillstand. Drehrate und |a| werden relativ zu langsam nachgeführten Referenzwerten (τ = 5 s) bewertet. Die Gyro-Referenz ist ohne Kalibrierung auf ±25 °/s begrenzt, mit Kalibrierung auf ±0,5 °/s. Zusätzlich gilt grob |‖a‖−1| < 0,25 g. Langsame Drehungen, die in der Referenz verschwinden würden, fängt das Kriterium „Drift der Schwerkraftrichtung“ ab. Alle Bedingungen müssen 0,6 s lang gelten:
+  * |ω − Referenz| < max(0,8 °/s; 5·σ_Gyro)
+  * Kurzzeit-Std von a (EMA, τ = 0,25 s) < max(6 mg; 4·σ_a)
+  * |‖a‖ − Referenz| < 0,03 g
   * Drift der Schwerkraftrichtung im Haltefenster < 0,25°. Das fängt langsames Kriechen
     ab, das unter der Gyroschwelle liegt.
 

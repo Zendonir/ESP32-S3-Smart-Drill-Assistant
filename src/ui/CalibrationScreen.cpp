@@ -57,6 +57,10 @@ void CalibrationScreen::setButtons(const char* left, const char* mid, const char
     set(btnLeft_, left);
     set(btnMid_, mid);
     set(btnRight_, right);
+    // a single button sits in the middle (the round panel clips the corners)
+    const int count = (left ? 1 : 0) + (mid ? 1 : 0) + (right ? 1 : 0);
+    lv_obj_align(btnLeft_, LV_ALIGN_CENTER, count == 1 ? 0 : -52, 72);
+    lv_obj_align(btnRight_, LV_ALIGN_CENTER, count == 1 ? 0 : 52, 72);
 }
 
 void CalibrationScreen::open(AppContext& app, Kind kind, std::function<void()> onDone) {
@@ -186,9 +190,17 @@ void CalibrationScreen::updateAxis(const OrientationSnapshot& s) {
         axisFrames_ = 0;
         axisSum_ = Vec3();
         lv_arc_set_value(arc_, 0);
-        lv_label_set_text(detail_, axisStep_ == 0 ? "Schritt 1/2 - ruhig liegen lassen" : "Schritt 2/2 - ruhig halten");
+        // tell the user what prevents the still-stand detection
+        const char* why = !s.valid                 ? "keine Sensordaten"
+                          : (s.stillBlockers & 1)  ? "Drehung erkannt"
+                          : (s.stillBlockers & 2)  ? "Erschütterung erkannt"
+                          : (s.stillBlockers & 4)  ? "Beschleunigung erkannt"
+                          : (s.stillBlockers & 8)  ? "langsame Lageänderung"
+                                                   : "warte auf Ruhe";
+        lv_label_set_text_fmt(detail_, "Schritt %d/2 - %s", axisStep_ + 1, why);
         return;
     }
+    lv_label_set_text_fmt(detail_, "Schritt %d/2 - messe ...", axisStep_ + 1);
     // device frame (current mapping) -> sensor frame
     axisSum_ += axisOld_.matrix().transposed() * s.rawAccelG;
     ++axisFrames_;

@@ -38,6 +38,26 @@ void test_still_detected_after_hold_time() {
     TEST_ASSERT_EQUAL(int(MotionState::Fast), int(md.state()));
 }
 
+void test_still_detected_without_calibration() {
+    // uncalibrated sensor: 2.5 deg/s gyro offset, |a| = 1.05 g (scale/offset error)
+    MotionDetector md;
+    SynthConfig c;
+    c.gyroBiasDps = Vec3(1.5f, -2.0f, 0.4f);
+    c.accelScale = Vec3(1.05f, 1.05f, 1.05f);
+    SyntheticImu imu(c, 9);
+    for (int i = 0; i < 224 * 3; ++i) {
+        const ImuSample s = imu.step(Vec3());
+        md.update(s.gyroDps, s.accelG, kDt);
+    }
+    TEST_ASSERT_TRUE(md.isStill());
+    TEST_ASSERT_EQUAL(0, md.stillBlockers());
+    // a real rotation is still detected immediately
+    const ImuSample m = imu.step(Vec3(10, 0, 0));
+    md.update(m.gyroDps, m.accelG, kDt);
+    TEST_ASSERT_FALSE(md.isStill());
+    TEST_ASSERT_TRUE(md.stillBlockers() & 1);
+}
+
 void test_slow_creep_is_not_still() {
     MotionDetector md;
     SynthConfig c;
@@ -144,6 +164,7 @@ int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_still_detected_after_hold_time);
     RUN_TEST(test_slow_creep_is_not_still);
+    RUN_TEST(test_still_detected_without_calibration);
     RUN_TEST(test_vibration_levels_and_release);
     RUN_TEST(test_accel_trust);
     RUN_TEST(test_timing_counter_mode_and_loss);

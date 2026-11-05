@@ -136,6 +136,7 @@ bool MeasurementPipeline::process(const ImuSample& raw) {
     const Vec3 aCal = aM * aD + aC;
 
     // motion / vibration
+    motion_.setGyroCalibrated(cal_.hasGyro());
     motion_.update(gCal, aCal, dt);
     vib_.update(aCal, gCal, dt);
     const bool still = motion_.isStill();
@@ -168,7 +169,10 @@ bool MeasurementPipeline::process(const ImuSample& raw) {
         fusionInit_ = true;
     }
     const float rateRad = deg2rad(gCal.norm());
-    const float trust = accelTrust(cfg_.trust, motion_.accelNormDevG(), vib_.rmsMg(), gCal.norm(), clipped);
+    // |a| check for the accel trust: absolute against 1 g once the accelerometer is
+    // calibrated, otherwise relative to the slow reference (offset/scale unknown)
+    const float normDevForTrust = cal_.hasAccel() ? motion_.accelAbsNormDevG() : motion_.accelNormDevG();
+    const float trust = accelTrust(cfg_.trust, normDevForTrust, vib_.rmsMg(), motion_.gyroRateDps(), clipped);
     unc_.predict(dt, rateRad, snap_.biasSigmaDps);
     float maxK = cfg_.uncertainty.maxStepGain;
     if (still && cfg_.fusionMinTauSec > 0.0f) maxK = std::fmin(maxK, dt / (cfg_.fusionMinTauSec + dt));
@@ -241,6 +245,7 @@ bool MeasurementPipeline::process(const ImuSample& raw) {
     s.fusionGain = k;
     s.accelNoiseG = accelNoiseG_;
     s.gyroRateDps = gCal.norm();
+    s.stillBlockers = motion_.stillBlockers();
     s.quality = assessQuality(qi, cfg_.quality);
     s.timing = timing_.stats();
     s.onlineBiasDps = onlineBias_;

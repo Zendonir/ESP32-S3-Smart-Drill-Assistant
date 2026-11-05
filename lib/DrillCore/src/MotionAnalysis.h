@@ -29,8 +29,10 @@ const char* vibrationLevelName(VibrationLevel v);
 
 struct MotionConfig {
     float stillGyroDps = 0.8f;       ///< floor; actual = max(floor, 5 * gyro noise)
-    float stillAccelStdG = 0.004f;   ///< floor; actual = max(floor, 4 * accel noise)
-    float stillAccelNormDevG = 0.03f;
+    float stillAccelStdG = 0.006f;   ///< floor; actual = max(floor, 4 * accel noise)
+    float stillAccelNormDevG = 0.03f;///< |a| change vs. its slow reference (offset independent)
+    float sanityNormDevG = 0.25f;    ///< |a| must be within 1 g +/- this (absolute, gross check)
+    float referenceTauSec = 5.0f;    ///< slow references for gyro offset and |a|
     float stillDirectionDeg = 0.25f; ///< max drift of gravity direction during hold
     float stillHoldSec = 0.6f;       ///< time all criteria must hold
     float fastGyroDps = 25.0f;       ///< above -> Fast
@@ -59,7 +61,15 @@ public:
     float stillSeconds() const { return stillTime_; }
     float gyroRateDps() const { return rate_; }
     float accelStdG() const { return std::sqrt(var_ > 0 ? var_ : 0); }
+    /// |a| deviation from its slow reference (linear acceleration indicator)
     float accelNormDevG() const { return normDev_; }
+    /// |a| deviation from 1 g (absolute; meaningful with a calibrated accelerometer)
+    float accelAbsNormDevG() const { return absNormDev_; }
+    /// Bit mask of the criteria that currently prevent still-stand:
+    /// 1 rotation, 2 accel noise/vibration, 4 |a| change, 8 gravity direction creeping
+    uint8_t stillBlockers() const { return blockers_; }
+    /// The gyro offset is known (calibrated) -> stricter absolute rate check.
+    void setGyroCalibrated(bool c) { gyroCalibrated_ = c; }
     float gyroThresholdDps() const;
     float accelStdThresholdG() const;
 
@@ -72,6 +82,11 @@ private:
     float var_ = 0.0f;
     float rate_ = 0.0f;
     float normDev_ = 0.0f;
+    float absNormDev_ = 0.0f;
+    Vec3 gyroRef_;               ///< slowly tracked residual gyro offset
+    float normRef_ = 1.0f;       ///< slowly tracked |a|
+    bool gyroCalibrated_ = false;
+    uint8_t blockers_ = 0;
     Vec3 holdRef_;
     float candTime_ = 0.0f;
     float stillTime_ = 0.0f;

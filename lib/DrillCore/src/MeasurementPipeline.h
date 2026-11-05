@@ -99,6 +99,7 @@ struct OrientationSnapshot {
     float fusionGain = 0.0f;
     float accelNoiseG = 0.0f;
     float gyroRateDps = 0.0f;
+    uint8_t stillBlockers = 0;     ///< see MotionDetector::stillBlockers()
 
     QualityAssessment quality;
     TimingStats timing;

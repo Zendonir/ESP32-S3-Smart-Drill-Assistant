@@ -9,7 +9,7 @@ einer kreisförmigen Zielanzeige, wie weit die Bohrachse vom Sollwinkel abweicht
 arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optional.
 
 > **Stand der Verifikation:** Die Firmware wird mit PlatformIO vollständig gebaut, und die
-> hardwareunabhängige Messbibliothek ist mit 79 Unit-Tests auf dem Host geprüft.
+> hardwareunabhängige Messbibliothek ist mit 80 Unit-Tests auf dem Host geprüft.
 > **Auf echter Hardware ist sie noch nicht getestet.** Pinbelegung, Achsorientierung des
 > QMI8658, Farbinvertierung des Displays, Touch-Orientierung und Akku-Spannungsteiler
 > müssen am konkreten Board geprüft werden, siehe [docs/Hardware.md](docs/Hardware.md)

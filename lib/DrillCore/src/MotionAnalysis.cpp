@@ -55,6 +55,8 @@ void MotionDetector::update(const Vec3& gyroDps, const Vec3& accelG, float dt) {
         mean_ = accelG;
         holdRef_ = accelG.normalized();
         var_ = 0.0f;
+        gyroRef_ = gyroCalibrated_ ? Vec3() : gyroDps;
+        normRef_ = accelG.norm();
         init_ = true;
     }
     const float a = emaAlpha(dt, cfg_.windowSec);
@@ -62,11 +64,33 @@ void MotionDetector::update(const Vec3& gyroDps, const Vec3& accelG, float dt) {
     mean_ += d * a;
     // exponentially weighted variance of the vector (sum over axes)
     var_ = (1.0f - a) * (var_ + a * d.norm2());
-    rate_ = gyroDps.norm();
-    normDev_ = std::fabs(accelG.norm() - 1.0f);
+    const float an = accelG.norm();
+    absNormDev_ = std::fabs(an - 1.0f);
 
-    const bool quiet = rate_ < gyroThresholdDps() && accelStdG() < accelStdThresholdG() &&
-                       normDev_ < cfg_.stillAccelNormDevG;
+    // Rotation rate relative to a slowly tracked offset. Without a gyro
+    // calibration the zero-rate offset (QMI8658 typ. a few deg/s) would otherwise
+    // look like a permanent rotation and still-stand could never be detected -
+    // which the calibrations themselves need. Slow rotations that hide in the
+    // reference are caught by the gravity-direction criterion below.
+    const Vec3 rel = gyroDps - gyroRef_;
+    // calibrated: the absolute rate is meaningful, the residual reference only
+    // absorbs small leftover offsets (+/-0.5 deg/s)
+    rate_ = rel.norm();
+    const float r = emaAlpha(dt, cfg_.referenceTauSec);
+    if (rel.norm() < 5.0f) {
+        gyroRef_ += rel * r;
+        const float lim = gyroCalibrated_ ? 0.5f : 25.0f;
+        gyroRef_ = Vec3(clampv(gyroRef_.x, -lim, lim), clampv(gyroRef_.y, -lim, lim), clampv(gyroRef_.z, -lim, lim));
+    }
+    // |a| relative to its slow reference: independent of accel offset/scale errors
+    normDev_ = std::fabs(an - normRef_);
+    if (normDev_ < 0.1f) normRef_ += (an - normRef_) * r;
+
+    blockers_ = 0;
+    if (rate_ >= gyroThresholdDps()) blockers_ |= 1;
+    if (accelStdG() >= accelStdThresholdG()) blockers_ |= 2;
+    if (normDev_ >= cfg_.stillAccelNormDevG || absNormDev_ >= cfg_.sanityNormDevG) blockers_ |= 4;
+    const bool quiet = blockers_ == 0;
     if (quiet) {
         if (candTime_ == 0.0f) holdRef_ = mean_.normalized();
         candTime_ += dt;
@@ -75,6 +99,7 @@ void MotionDetector::update(const Vec3& gyroDps, const Vec3& accelG, float dt) {
             // slow creeping rotation: restart the hold window
             candTime_ = dt;
             holdRef_ = mean_.normalized();
+            blockers_ |= 8;
         }
     } else {
         candTime_ = 0.0f;
