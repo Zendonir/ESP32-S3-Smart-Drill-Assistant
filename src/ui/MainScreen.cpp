@@ -758,7 +758,6 @@ bool MainScreen::toggleTempReference() {
         fx_.reset();
         fy_.reset();
         fv_.reset();
-        showToast("Original-Bezug");
         return false;
     }
     OrientationSnapshot s;
@@ -779,7 +778,6 @@ bool MainScreen::toggleTempReference() {
     fy_.reset();
     fv_.reset();
     history_.clear();
-    showToast(s.motion == MotionState::Still ? "Temporärer Bezug" : "Temp. Bezug (bewegt!)");
     return true;
 }
 
