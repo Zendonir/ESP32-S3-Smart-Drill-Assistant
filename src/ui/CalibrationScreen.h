@@ -50,6 +50,10 @@ private:
     sda::Vec3 axisFlatS_;
     sda::AxisMap axisOld_;
     sda::AxisDetectResult axisResult_;
+    // step confirmation: measurements only start after "Start"/"Weiter"
+    bool awaitConfirm_ = false;
+    uint8_t lastPoseMask_ = 0;
+    void askConfirm(const char* title, const char* nextStep, const char* button);
     void updateAxis(const sda::OrientationSnapshot& s);
 
     lv_obj_t* button(const char* text, int x, int y, int w, lv_event_cb_t cb);

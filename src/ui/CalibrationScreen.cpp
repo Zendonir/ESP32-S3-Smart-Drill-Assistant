@@ -127,8 +127,9 @@ void CalibrationScreen::open(AppContext& app, Kind kind, std::function<void()> o
         case Kind::Accel:
         case Kind::AccelExtended:
             lv_label_set_text(title_, kind == Kind::Accel ? "6-Lagen-Kalibr." : "6 Lagen erweitert");
-            setButtons(nullptr, "Abbrechen", nullptr);
             app.meas.startAccelCalibration(kind == Kind::AccelExtended);
+            lastPoseMask_ = 0;
+            askConfirm("6 Lagen", "Gerät in eine der 6 Lagen\nlegen, dann Start", "Start");
             break;
         case Kind::MountRoll:
             lv_label_set_text(title_, "Montage (V-Nut)");
@@ -147,6 +148,7 @@ void CalibrationScreen::open(AppContext& app, Kind kind, std::function<void()> o
             axisFrames_ = 0;
             axisSum_ = Vec3();
             axisOld_ = app.settings.get().system.axisMap;
+            askConfirm("Schritt 1/2", "Display nach OBEN\nflach hinlegen,\ndann Start", "Start");
             break;
     }
     lv_scr_load(scr_);
@@ -181,8 +183,16 @@ void CalibrationScreen::update(const OrientationSnapshot& s) {
 
 // Two still positions are averaged in SENSOR coordinates (the current mapping is
 // undone), the mapping is then derived by detectAxisMap().
+void CalibrationScreen::askConfirm(const char* title, const char* nextStep, const char* button) {
+    awaitConfirm_ = true;
+    lv_arc_set_value(arc_, 0);
+    lv_label_set_text(text_, title);
+    lv_label_set_text(detail_, nextStep);
+    setButtons("Abbr.", nullptr, button);
+}
+
 void CalibrationScreen::updateAxis(const OrientationSnapshot& s) {
-    if (phase_ != Phase::Running) return;
+    if (phase_ != Phase::Running || awaitConfirm_) return;
     constexpr int kFrames = 40;  // ~1 s at the UI rate
     lv_label_set_text(text_, axisStep_ == 0 ? "Display nach OBEN\nflach hinlegen"
                                             : "Aufrecht hinstellen,\ndieser Text lesbar");
@@ -212,7 +222,13 @@ void CalibrationScreen::updateAxis(const OrientationSnapshot& s) {
     if (axisStep_ == 0) {
         axisFlatS_ = mean;
         axisStep_ = 1;
+        askConfirm(LV_SYMBOL_OK " Schritt 1 erledigt", "Als Nächstes: aufrecht\nhinstellen, Text lesbar,\ndann Weiter", "Weiter");
+        return;
+    }
+    // step 2 must be a different position (device turned upright, ~90 deg)
+    if (rad2deg(angleBetween(mean, axisFlatS_)) < 45.0f) {
         lv_arc_set_value(arc_, 0);
+        lv_label_set_text(detail_, "Gerät liegt noch flach -\nbitte aufrecht hinstellen");
         return;
     }
     axisResult_ = detectAxisMap(axisFlatS_, mean);
@@ -269,6 +285,22 @@ void CalibrationScreen::updateAccel(const OrientationSnapshot& s) {
     }
     if (phase_ != Phase::Running) return;
     const uint8_t all = 0x3F;
+    // a pose was just accepted: confirm before the next one is measured
+    if (s.cal.acceptedPoseMask != lastPoseMask_) {
+        int done = -1;
+        for (int i = 0; i < 6; ++i)
+            if ((s.cal.acceptedPoseMask & (1u << i)) && !(lastPoseMask_ & (1u << i))) done = i;
+        lastPoseMask_ = s.cal.acceptedPoseMask;
+        if (s.cal.acceptedPoseMask != all && done >= 0) {
+            int count = 0;
+            for (int i = 0; i < 6; ++i) count += (s.cal.acceptedPoseMask >> i) & 1;
+            static char title[40];
+            snprintf(title, sizeof(title), LV_SYMBOL_OK " Lage %s erledigt (%d/6)", accelPoseName(AccelPose(done)), count);
+            askConfirm(title, "Gerät in die nächste Lage\nbringen, dann Weiter", "Weiter");
+            return;
+        }
+    }
+    if (awaitConfirm_) return;
     if (s.cal.acceptedPoseMask == all && !solving_) {
         solving_ = true;
         if (app_->meas.accelSolve(accelResult_)) {
@@ -365,6 +397,14 @@ void CalibrationScreen::onMid() {
 
 void CalibrationScreen::onRight() {
     const uint8_t active = app_->settings.get().system.activeProfile;
+    if (awaitConfirm_) {
+        // user confirmed: the next measurement may start (still-stand required)
+        awaitConfirm_ = false;
+        axisFrames_ = 0;
+        axisSum_ = Vec3();
+        setButtons(nullptr, "Abbrechen", nullptr);
+        return;
+    }
     if (kind_ == Kind::AxisDetect) {
         if (phase_ != Phase::Result) return;
         const AxisMap m = axisResult_.map;

@@ -15,7 +15,9 @@ sie wird separat unter Kalibrierung › „Kalibr. löschen“ gelöscht.
 
 Dieser Schritt kommt vor allen anderen.
 Er bestimmt, wie die Sensorachsen des QMI8658 auf die Geräteachsen fallen (X rechts, Y oben, Z aus dem Display).
-Dafür misst die Firmware zwei Ruhelagen, jeweils etwa 1 s:
+Dafür misst die Firmware zwei Ruhelagen, jeweils etwa 1 s.
+Jede Messung beginnt erst nach **Start** bzw. **Weiter**, damit man in Ruhe umlagern kann.
+Schritt 2 wird zusätzlich nur gemessen, wenn das Gerät mindestens 45° anders liegt als in Schritt 1:
 
 1. Display flach nach oben: Die Schwerkraftachse ergibt Z.
 2. Aufrecht, Text lesbar: Die Schwerkraftachse ergibt Y.
@@ -66,6 +68,8 @@ Z aus dem Display):
 | −Y | Kopfstand (auf der oberen Kante) |
 | +X | auf der linken Kante, rechte Kante oben |
 | −X | auf der rechten Kante |
+
+Nach jeder fertigen Lage zeigt der Assistent „✓ Lage … erledigt (n/6)“ und wartet auf **Weiter**. Erst dann wird die nächste Lage erkannt und gemessen. Die erste Messung startet mit **Start**.
 
 Weil das Gerät rund ist, empfiehlt sich ein **rechtwinkliges Gehäuse oder ein Halter**
 mit ebenen Flächen. Die Reihenfolge ist beliebig: Die Firmware erkennt die aktuelle Lage
