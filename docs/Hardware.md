@@ -97,6 +97,22 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
 
 ## Energiesparen
 
+Stromsparmaßnahmen (Firmware):
+
+| Maßnahme | Standard |
+|---|---|
+| Helligkeit | 50 % (Hintergrundbeleuchtung = vermutlich größter Verbraucher) |
+| Dimmen | nach 45 s Inaktivität auf 10 % |
+| Display aus | nach 10 min; dabei **Sparmodus**: CPU 80 MHz, QMI8658 28 Hz statt 224 Hz (Umschaltung ohne Neustart der Lagebestimmung), Touch-Controller im Auto-Sleep. Bewegung und Berührung wecken weiterhin |
+| CPU im Betrieb | 160 MHz („Leistung: Sparsam“), umschaltbar auf 240 MHz |
+| Bildrate | 15 statt 40 Bilder/s, solange sich nichts bewegt und nichts bedient wird (3 s nach der letzten Eingabe) |
+| WLAN-Access-Point | aus nach 10 min ohne verbundenes Gerät (einstellbar, 0 = nie) |
+| Automatisch aus | nach 15 min ohne Nutzung |
+| Ladeprüfung im Aus-Zustand | alle 60 s |
+
+Bereits gespeicherte Einstellungen bleiben bei einem Update unverändert. Die neuen Standardwerte gelten nach einem Werksreset oder lassen sich im Menü (Anzeige/System) übernehmen.
+Die tatsächlichen Ströme sind noch nicht gemessen.
+
 | Zustand | Auslöser | Aufwecken |
 |---|---|---|
 | Dimmen (20 %) | keine Berührung und keine Bewegung für `dimAfterSec` | Berührung, Bewegung, BOOT |

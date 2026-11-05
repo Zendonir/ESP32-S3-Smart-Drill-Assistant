@@ -34,7 +34,7 @@ sda::PipelineConfig AppContext::pipelineConfig(const sda::AppSettings& s) const 
 
 namespace system_task {
 namespace {
-constexpr uint64_t kChargeCheckIntervalUs = 30ULL * 1000000ULL;
+constexpr uint64_t kChargeCheckIntervalUs = 60ULL * 1000000ULL;
 // survives deep sleep
 RTC_DATA_ATTR bool g_rtcChargeWake = false;
 RTC_DATA_ATTR float g_rtcDivider = 3.0f;

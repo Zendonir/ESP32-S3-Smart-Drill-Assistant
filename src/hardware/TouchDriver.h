@@ -24,6 +24,9 @@ public:
     bool consumeActivity();
     void sleep();
     void wake();
+    /// Display off: controller may enter its own auto sleep (still wakes on touch
+    /// and raises INT); no periodic polling meanwhile.
+    void setLowPower(bool lp);
 
 private:
     I2CBus& bus_;
@@ -33,5 +36,6 @@ private:
     uint8_t chipId_ = 0, fw_ = 0;
     uint32_t errors_ = 0;
     uint32_t lastReadMs_ = 0;
+    bool lowPower_ = false;
     void reset();
 };

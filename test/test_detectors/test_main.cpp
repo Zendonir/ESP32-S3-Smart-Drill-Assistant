@@ -136,6 +136,24 @@ void test_timing_counter_mode_and_loss() {
     TEST_ASSERT_TRUE(st.discontinuity);
 }
 
+void test_timing_rate_change_without_discontinuity() {
+    TimingEstimator te;
+    te.configure(224.2f);
+    uint64_t t = 0;
+    uint32_t cnt = 0;
+    for (int i = 0; i < 224 * 3; ++i) te.update(++cnt, t += 4460);
+    te.changeNominalRate(28.025f);  // power saving mode
+    bool disc = false;
+    TimingStep st;
+    for (int i = 0; i < 28 * 4; ++i) {
+        st = te.update(++cnt, t += 35682);
+        disc |= st.discontinuity;
+    }
+    TEST_ASSERT_FALSE(disc);
+    TEST_ASSERT_FLOAT_WITHIN(0.0005f, 0.035682f, st.dtSec);
+    TEST_ASSERT_EQUAL_UINT32(0, te.stats().lostSamples);
+}
+
 void test_timing_fallback_to_host_time() {
     TimingEstimator te;
     te.configure(224.2f);
@@ -169,6 +187,7 @@ int main(int, char**) {
     RUN_TEST(test_accel_trust);
     RUN_TEST(test_timing_counter_mode_and_loss);
     RUN_TEST(test_timing_fallback_to_host_time);
+    RUN_TEST(test_timing_rate_change_without_discontinuity);
     RUN_TEST(test_drill_activity);
     return UNITY_END();
 }

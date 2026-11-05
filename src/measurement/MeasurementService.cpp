@@ -51,6 +51,19 @@ void MeasurementService::imuTask() {
             lastSampleMs = millis();
             continue;
         }
+        // power saving: switch the sensor output rate (done here, in the only task
+        // that talks to the IMU), then tell the fusion task about the new rate
+        if (lowPowerReq_ != lowPowerActive_) {
+            const bool lp = lowPowerReq_;
+            if (imu_->setOdrCode(lp ? appcfg::kImuOdrCodeLowPower : appcfg::kImuOdrCodeNormal)) {
+                lowPowerActive_ = lp;
+                Command c;
+                c.type = CmdType::SetRate;
+                c.u.f = lp ? appcfg::kImuRateLowPowerHz : appcfg::kImuRateNormalHz;
+                post(c);
+                LOGI(TAG, "IMU rate %.1f Hz (%s)", double(c.u.f), lp ? "power saving" : "normal");
+            }
+        }
         sda::ImuSample s;
         bool got = imu_->readSample(s);
         if (got && (s.flags & sda::kSampleBusError)) {
@@ -70,7 +83,8 @@ void MeasurementService::imuTask() {
             timeoutReported = false;
             stats_.samples++;
             if (xQueueSend(sampleQueue_, &s, 0) != pdTRUE) stats_.queueOverflows++;
-            vTaskDelay(pdMS_TO_TICKS(appcfg::kImuIdleAfterSampleMs));
+            // sleep most of the sample period, then poll (fewer wake-ups at low rates)
+            vTaskDelay(pdMS_TO_TICKS(lowPowerActive_ ? 30 : appcfg::kImuIdleAfterSampleMs));
             continue;
         }
         if (!timeoutReported && millis() - lastSampleMs > appcfg::kImuDataTimeoutMs) {
@@ -172,6 +186,7 @@ void MeasurementService::execute(const Command& c) {
             signal = true;
             break;
         case CT::Suspend: signal = true; break;
+        case CT::SetRate: pipeline_.setNominalRate(c.u.f); break;
     }
     if (signal) xSemaphoreGive(done_);
 }

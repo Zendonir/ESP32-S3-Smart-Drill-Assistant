@@ -134,6 +134,11 @@ public:
     const MountModel& mount() const { return mount_; }
     void setFusion(FusionType t);
     void setFilterTau(float minTauSec) { cfg_.fusionMinTauSec = minTauSec; }
+    /// Sensor ODR changed (power saving) - no fusion reset.
+    void setNominalRate(float hz) {
+        cfg_.nominalRateHz = hz;
+        timing_.changeNominalRate(hz);
+    }
 
     /// Re-initializes fusion/motion state (keeps calibration and references).
     void reset();

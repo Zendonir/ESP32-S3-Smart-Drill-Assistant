@@ -83,6 +83,9 @@ private:
     void buttonAction(sda::ButtonAction a);
     void wakeDisplay();
     void checkStartupGyro();
+    void setIdlePower(bool idle);
+    uint32_t cpuMhzActive() const;
+    uint32_t lastInputMs_ = 0;
     // power button feedback (drawn on the top layer, above every screen)
     lv_obj_t* powerOverlay_ = nullptr;
     lv_obj_t* powerArc_ = nullptr;

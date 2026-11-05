@@ -43,7 +43,17 @@ constexpr uint32_t kImuDataTimeoutMs = 100;    // no data -> sensor fault
 constexpr uint32_t kImuQueueLength = 32;
 
 // ---- UI -----------------------------------------------------------------------
-constexpr uint32_t kUiTargetFps = 40;          // 30..60 FPS target, adapts to load
+constexpr uint32_t kUiTargetFps = 40;          // while something moves / is touched
+constexpr uint32_t kUiIdleFps = 15;            // nothing changes (still, hold, menus idle)
+constexpr uint8_t kDimBrightnessPct = 10;      // backlight level when dimmed
+// power saving while the display is off
+constexpr uint32_t kCpuMhzIdle = 80;
+constexpr uint32_t kCpuMhzEconomy = 160;
+constexpr uint32_t kCpuMhzMax = 240;
+constexpr uint8_t kImuOdrCodeNormal = 5;       // 224.2 Hz (6DOF)
+constexpr uint8_t kImuOdrCodeLowPower = 8;     // 28.0 Hz (6DOF)
+constexpr float kImuRateNormalHz = 224.2f;
+constexpr float kImuRateLowPowerHz = 28.025f;
 constexpr uint32_t kLvglBufferLines = 40;      // two DMA buffers of 240 x 40 px
 constexpr uint32_t kLongPressMs = 800;
 constexpr uint32_t kDoubleTapMs = 350;

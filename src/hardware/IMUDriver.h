@@ -41,6 +41,9 @@ public:
     bool byteSwapActive() const { return swap_; }
     uint32_t readErrors() const { return readErrors_; }
     uint32_t consecutiveErrors() const { return consecutiveErrors_; }
+    /// Changes only the output data rate (power saving), keeps everything else.
+    bool setOdrCode(uint8_t code);
+    uint8_t odrCode() const { return cfg_.odrCode; }
     /// Re-runs the configuration after a bus recovery.
     bool reinit();
     /// Register dump for diagnostics (CTRL1..CTRL9)

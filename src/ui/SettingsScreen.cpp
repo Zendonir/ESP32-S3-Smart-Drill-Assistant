@@ -294,6 +294,8 @@ void UIManager::menuWifi() {
             MenuItem::info("Web-Login", [] { return std::string("admin"); }),
             MenuItem::info("Web-Passwort", [&sm] { return std::string(sm.get().system.adminPassword); }),
             MenuItem::info("Hostname", [&sm] { return std::string(sm.get().system.hostname) + ".local"; }),
+            MenuItem::number("AP aus nach", 0, 120, 5, 0, " min", [&sm] { return float(sm.get().system.apIdleOffMin); },
+                             [&sm](float v) { sm.update([v](AppSettings& s) { s.system.apIdleOffMin = uint8_t(v); }); }),
             MenuItem::confirm("Zugang löschen", "WLAN-Zugangsdaten löschen?", [&sm] {
                 sm.update([](AppSettings& s) {
                     s.system.ssid[0] = '\0';
@@ -333,6 +335,9 @@ void UIManager::menuSystem() {
                           [this] { return std::string(app_->imu.isHealthy() ? "ok" : "FEHLER"); }),
             MenuItem::act("Diagnose", [this] { openDiagnostics(); }),
             MenuItem::act("Farbtest", [this] { showColorTest(); }),
+            MenuItem::choice("Leistung", "Sparsam (160 MHz)\nMaximal (240 MHz)",
+                             [&sm] { return int(sm.get().system.performance); },
+                             [&sm](int i) { sm.update([i](AppSettings& s) { s.system.performance = uint8_t(i); }); }),
             MenuItem::choice("Ladeanzeige", "Aus\nNur wenn an\nAuch wenn aus",
                              [&sm] { return int(sm.get().system.chargeScreen); },
                              [&sm](int i) { sm.update([i](AppSettings& s) { s.system.chargeScreen = uint8_t(i); }); }),

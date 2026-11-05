@@ -51,6 +51,7 @@ void NetworkManager::startAp() {
     LOGI(TAG, "access point %s (%s) %s, IP %s", ssid, apSecured_ ? "WPA2" : "offen", ok ? "started" : "FAILED",
          WiFi.softAPIP().toString().c_str());
     startDns();
+    apBusyMs_ = millis();
 }
 
 void NetworkManager::startDns() {
@@ -90,6 +91,7 @@ void NetworkManager::applySettings(bool force) {
     sda::copyString(host_, sizeof(host_), s.system.hostname);
     mdns_ = s.system.mdns;
     load_events::mark();  // WiFi changes the current draw considerably
+    fallbackGaveUp_ = false;
     stopAll();
     switch (s.system.wifiMode) {
         case sda::WifiMode::Off: LOGI(TAG, "WiFi off"); break;
@@ -147,7 +149,7 @@ void NetworkManager::task() {
             lastSlow = now;
             if (mode_ == uint8_t(sda::WifiMode::Client)) {
                 const bool conn = WiFi.status() == WL_CONNECTED;
-                if (!conn && !apFallback_ && now - clientStartMs_ > appcfg::kClientFallbackToApMs) {
+                if (!conn && !apFallback_ && !fallbackGaveUp_ && now - clientStartMs_ > appcfg::kClientFallbackToApMs) {
                     // client connection failed -> keep trying, but open the config AP
                     LOGW(TAG, "no connection to '%s' -> configuration AP", ssid_);
                     apFallback_ = true;
@@ -163,6 +165,28 @@ void NetworkManager::task() {
                     WiFi.softAPdisconnect(true);
                     WiFi.mode(WIFI_STA);
                     apFallback_ = false;
+                }
+            }
+            // access point unused for a while -> switch it off (saves a lot of power)
+            if (WiFi.getMode() & WIFI_AP) {
+                const uint8_t limitMin = app_.settings.get().system.apIdleOffMin;
+                if (WiFi.softAPgetStationNum() > 0) apBusyMs_ = now;
+                else if (limitMin && now - apBusyMs_ > uint32_t(limitMin) * 60000u) {
+                    UiCommand c{};
+                    c.type = UiCommand::Type::ShowMessage;
+                    sda::copyString(c.text, sizeof(c.text), "WLAN aus (ungenutzt)");
+                    app_.postUi(c);
+                    if (apFallback_) {
+                        LOGI(TAG, "fallback AP unused -> closed");
+                        stopDns();
+                        WiFi.softAPdisconnect(true);
+                        WiFi.mode(WIFI_STA);
+                        apFallback_ = false;
+                        fallbackGaveUp_ = true;
+                    } else {
+                        LOGI(TAG, "access point unused for %u min -> WiFi off", limitMin);
+                        app_.settings.update([](sda::AppSettings& s) { s.system.wifiMode = sda::WifiMode::Off; });
+                    }
                 }
             }
             ensureServices();

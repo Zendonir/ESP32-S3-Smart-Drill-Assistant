@@ -53,7 +53,7 @@ bool TouchDriver::read(int16_t& x, int16_t& y, bool& pressed) {
     }
     const uint32_t now = millis();
     // Read only after an interrupt, while a finger is down, or as a slow safety poll.
-    if (!g_touchIrq && !lastPressed_ && (now - lastReadMs_) < 200) {
+    if (!g_touchIrq && !lastPressed_ && (lowPower_ || (now - lastReadMs_) < 200)) {
         x = lastX_;
         y = lastY_;
         pressed = false;
@@ -84,6 +84,14 @@ bool TouchDriver::consumeActivity() {
     const bool a = g_touchActivity;
     g_touchActivity = false;
     return a;
+}
+
+void TouchDriver::setLowPower(bool lp) {
+    if (!present_ || lp == lowPower_) return;
+    lowPower_ = lp;
+    // 0xFE: 0 = auto sleep allowed, 1 = always awake (fast, reliable I2C)
+    if (lp) bus_.writeReg(board::kTouchAddr, 0xFE, 0x00);
+    else if (!bus_.writeReg(board::kTouchAddr, 0xFE, 0x01)) wake();  // asleep: reset wakes it
 }
 
 void TouchDriver::sleep() {

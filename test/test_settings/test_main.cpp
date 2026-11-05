@@ -44,7 +44,7 @@ void test_invalid_values_are_repaired() {
     TEST_ASSERT_TRUE(n >= 8);
     TEST_ASSERT_EQUAL(2, s.measurement.filterStrength);
     TEST_ASSERT_EQUAL_FLOAT(3.0f, s.measurement.precisionWindowSec);
-    TEST_ASSERT_EQUAL(80, s.display.brightness);
+    TEST_ASSERT_EQUAL(AppSettings{}.display.brightness, s.display.brightness);
     TEST_ASSERT_EQUAL(15, s.display.historyWindowSec);
     TEST_ASSERT_EQUAL(int(WifiMode::AccessPoint), int(s.system.wifiMode));
     TEST_ASSERT_EQUAL_STRING("smartdrill", s.system.hostname);

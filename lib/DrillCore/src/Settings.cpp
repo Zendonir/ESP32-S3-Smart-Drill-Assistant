@@ -186,6 +186,8 @@ int validateSettings(AppSettings& s) {
     n += fixRange<uint8_t>(ss.activeProfile, 0, kMaxProfiles - 1, 0);
     n += fixRange<uint8_t>(ss.liveRateHz, 1, 25, 10);
     n += fixRange<uint8_t>(ss.chargeScreen, 0, 2, 2);
+    n += fixRange<uint8_t>(ss.performance, 0, 1, 0);
+    n += fixRange<uint8_t>(ss.apIdleOffMin, 0, 120, 10);
     s.version = kSettingsVersion;
     return n;
 }

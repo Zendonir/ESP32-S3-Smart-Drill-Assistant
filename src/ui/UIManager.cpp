@@ -90,7 +90,9 @@ void UIManager::start() {
 void UIManager::taskEntry(void* arg) { static_cast<UIManager*>(arg)->task(); }
 
 void UIManager::task() {
-    const TickType_t period = pdMS_TO_TICKS(1000 / appcfg::kUiTargetFps);
+    const TickType_t fastPeriod = pdMS_TO_TICKS(1000 / appcfg::kUiTargetFps);
+    const TickType_t idlePeriod = pdMS_TO_TICKS(1000 / appcfg::kUiIdleFps);
+    setCpuFrequencyMhz(cpuMhzActive());
     TickType_t wake = xTaskGetTickCount();
     uint32_t lastMs = millis();
     uint32_t lastSlow = 0;
@@ -154,7 +156,13 @@ void UIManager::task() {
         }
         // while the display is off a slow loop keeps touch handling alive
         if (displayOff_) vTaskDelay(pdMS_TO_TICKS(100)), wake = xTaskGetTickCount();
-        else vTaskDelayUntil(&wake, period);
+        else {
+            // full frame rate while something moves or is operated, otherwise less
+            if (app_->display.touchPressed()) lastInputMs_ = millis();
+            const bool busy = view_ != View::Main || snap_.motion != MotionState::Still || chargeOverlay_ ||
+                              powerOverlay_ || quick_ || picker_ || millis() - lastInputMs_ < 3000;
+            vTaskDelayUntil(&wake, busy ? fastPeriod : idlePeriod);
+        }
     }
 }
 
@@ -169,13 +177,16 @@ void UIManager::handleCommand(const UiCommand& c) {
         case T::Wake: wakeDisplay(); break;
         case T::DisplayDim:
             if (!displayOff_) {
-                app_->display.setBrightness(settings_.display.brightness > 20 ? 20 : settings_.display.brightness);
+                app_->display.setBrightness(settings_.display.brightness > appcfg::kDimBrightnessPct
+                                                ? appcfg::kDimBrightnessPct
+                                                : settings_.display.brightness);
                 dimmed_ = true;
             }
             break;
         case T::DisplayOff:
             app_->display.sleep();
             displayOff_ = true;
+            if (!app_->chargeMode) setIdlePower(true);
             break;
         case T::ButtonShort:
             if (displayOff_ || dimmed_) {
@@ -415,16 +426,31 @@ void UIManager::showGoodbye() {
     powerArc_ = nullptr;
 }
 
+uint32_t UIManager::cpuMhzActive() const {
+    return settings_.system.performance ? appcfg::kCpuMhzMax : appcfg::kCpuMhzEconomy;
+}
+
+// Display off: nobody looks, so lower the CPU clock and the sensor rate and let
+// the touch controller sleep. Motion (system task, gyro rate) and touch (INT)
+// still wake the display.
+void UIManager::setIdlePower(bool idle) {
+    setCpuFrequencyMhz(idle ? appcfg::kCpuMhzIdle : cpuMhzActive());
+    app_->meas.setLowPower(idle);
+    app_->touch.setLowPower(idle);
+}
+
 void UIManager::wakeDisplay() {
     if (displayOff_ && !sleepAtMs_) {
         // display was off: show the charge level briefly after waking up
         if (view_ == View::Main) main_.showToast(batteryText(true).c_str(), 1500);
     }
     if (displayOff_) {
+        setIdlePower(false);
         app_->display.wake();
         displayOff_ = false;
     }
     if (dimmed_) dimmed_ = false;
+    lastInputMs_ = millis();
     app_->display.setBrightness(settings_.display.brightness);
 }
 
@@ -456,6 +482,8 @@ void UIManager::applySettings(bool initial) {
         if (!dimmed_ && !displayOff_) app_->display.setBrightness(settings_.display.brightness);
     }
     if (initial || old.display.rotation != settings_.display.rotation) app_->display.setRotation(settings_.display.rotation);
+    if (!initial && old.system.performance != settings_.system.performance && !displayOff_)
+        setCpuFrequencyMhz(cpuMhzActive());
     if (!initial) {
         if (old.measurement.fusion != settings_.measurement.fusion) app_->meas.setFusion(settings_.measurement.fusion);
         if (old.measurement.filterStrength != settings_.measurement.filterStrength)

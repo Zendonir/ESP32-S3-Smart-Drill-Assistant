@@ -29,6 +29,8 @@ private:
     bool serverStarted_ = false;
     bool apFallback_ = false;
     bool apSecured_ = false;
+    uint32_t apBusyMs_ = 0;        ///< last time a client was connected (or AP started)
+    bool fallbackGaveUp_ = false;  ///< fallback AP closed after idling
     class DNSServer* dns_ = nullptr;   ///< captive portal: answers every DNS query with the AP address
     uint32_t clientStartMs_ = 0;
     uint32_t lastReconnectMs_ = 0;

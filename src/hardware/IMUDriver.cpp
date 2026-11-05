@@ -181,6 +181,20 @@ bool QMI8658Driver::readSample(sda::ImuSample& out) {
     return true;
 }
 
+bool QMI8658Driver::setOdrCode(uint8_t code) {
+    if (addr_ == 0) return false;
+    uint8_t c2 = 0, c3 = 0;
+    if (!bus_.readRegs(addr_, REG_CTRL2, &c2, 1) || !bus_.readRegs(addr_, REG_CTRL3, &c3, 1)) return false;
+    c2 = static_cast<uint8_t>((c2 & 0xF0) | (code & 0x0F));
+    c3 = static_cast<uint8_t>((c3 & 0xF0) | (code & 0x0F));
+    const bool ok = bus_.writeReg(addr_, REG_CTRL2, c2) && bus_.writeReg(addr_, REG_CTRL3, c3);
+    if (ok) {
+        cfg_.odrCode = code & 0x0F;
+        info_.nominalRateHz = 896.8f / static_cast<float>(1u << ((code & 0x0F) - 3));  // 6DOF table
+    }
+    return ok;
+}
+
 bool QMI8658Driver::setPowerDown(bool down) {
     if (addr_ == 0) return false;
     if (down) {

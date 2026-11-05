@@ -55,8 +55,8 @@ struct MeasurementSettings {
 };
 
 struct DisplaySettings {
-    uint8_t brightness = 80;     ///< 5..100 %
-    uint16_t dimAfterSec = 90;   ///< 0 = never
+    uint8_t brightness = 50;     ///< 5..100 % (backlight is the largest consumer)
+    uint16_t dimAfterSec = 45;   ///< 0 = never
     uint16_t offAfterSec = 600;  ///< 0 = never
     uint8_t rotation = 0;        ///< 0..3 (x 90 deg)
     uint8_t theme = 0;           ///< 0 dark, 1 high contrast
@@ -78,7 +78,9 @@ struct SystemSettings {
     char adminPassword[17] = "";  ///< generated on first boot if empty (web API auth)
     char hostname[25] = "smartdrill";
     bool mdns = true;
-    uint16_t sleepAfterMin = 30;  ///< deep sleep after inactivity, 0 = never
+    uint16_t sleepAfterMin = 15;  ///< deep sleep after inactivity, 0 = never
+    uint8_t performance = 0;      ///< 0 economy (CPU 160 MHz), 1 maximum (240 MHz)
+    uint8_t apIdleOffMin = 10;    ///< access point off after N min without clients, 0 = never
     ButtonAction bootButton = ButtonAction::Hold;
     bool powerOnHold = true;      ///< switching on requires holding BOOT for 1 s
     uint8_t chargeScreen = 2;     ///< 0 off, 1 while switched on, 2 also wake from "off" to show it

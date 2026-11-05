@@ -32,6 +32,17 @@ void TimingEstimator::reset() {
     stats_.estimatedRateHz = nominal_;
 }
 
+void TimingEstimator::changeNominalRate(float r) {
+    if (!(r > 1.0f)) return;
+    nominal_ = r;
+    period_ = 1.0f / r;
+    stats_.nominalRateHz = r;
+    stats_.estimatedRateHz = r;
+    // restart the period estimate from here (old samples had the old period)
+    anchorHostUs_ = prevHostUs_;
+    anchorCount_ = accumulatedCount_;
+}
+
 void TimingEstimator::clearStats() {
     const bool cm = stats_.counterMode;
     const float est = stats_.estimatedRateHz;

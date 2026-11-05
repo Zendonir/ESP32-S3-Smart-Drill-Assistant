@@ -40,6 +40,9 @@ public:
     /// @param counterBits     width of the sensor counter (24 for QMI8658)
     void configure(float nominalRateHz, uint8_t counterBits = 24, float maxGapSec = 0.1f);
     void reset();
+    /// The sensor output data rate was changed on purpose (power saving): adopt
+    /// the new nominal period without a discontinuity (fusion keeps running).
+    void changeNominalRate(float nominalRateHz);
     TimingStep update(uint32_t counter, uint64_t hostTimeUs);
     const TimingStats& stats() const { return stats_; }
     float periodSec() const { return period_; }

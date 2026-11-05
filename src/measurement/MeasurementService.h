@@ -27,7 +27,7 @@ public:
         Reset, SetCalibration, SetMount, SetFusion, SetFilterTau, SetConfig,
         StartGyroCal, StartAccelCal, AccelBeginPose, AccelSolve, StartMountCal, MountCapture, MountSolve,
         CancelCal, CaptureTiltZero, CaptureFull3D, CaptureSurface, ClearReference, StartPrecision, AbortPrecision,
-        GetCalibration, GetGyroResult, Suspend,
+        GetCalibration, GetGyroResult, Suspend, SetRate,
     };
 
     struct Stats {
@@ -79,6 +79,9 @@ public:
 
     /// Power down / up the IMU (deep sleep preparation)
     void suspend();
+    /// Low power while the display is off: lower sensor rate (motion wake-up keeps working).
+    void setLowPower(bool lp) { lowPowerReq_ = lp; }
+    bool lowPower() const { return lowPowerActive_; }
 
     struct Command {
         CmdType type;
@@ -107,6 +110,8 @@ private:
     I2CBus* bus_ = nullptr;
     bool imuOk_ = false;
     volatile bool suspended_ = false;
+    volatile bool lowPowerReq_ = false;
+    volatile bool lowPowerActive_ = false;
     sda::MeasurementPipeline pipeline_;
     SharedState<sda::OrientationSnapshot> shared_;
     QueueHandle_t sampleQueue_ = nullptr;
