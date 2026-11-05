@@ -32,6 +32,18 @@ void relativeTilt(const Vec3& upRefD, const Vec3& upD, float& relXDeg, float& re
     relYDeg = rad2deg(safeAsin(v.y));
 }
 
+float surfaceAngleDeg(const Vec3& upRefD, const Vec3& upD) {
+    const Vec3 a = upRefD.normalized(), b = upD.normalized();
+    // atan2 form: accurate near 0 and 180 deg (acos is not)
+    return rad2deg(std::atan2(a.cross(b).norm(), a.dot(b)));
+}
+
+float supportFaceTiltDeg(const Vec3& upD) {
+    const Vec3 u = upD.normalized();
+    const float m = std::fmax(std::fabs(u.x), std::fmax(std::fabs(u.y), std::fabs(u.z)));
+    return rad2deg(std::acos(std::fmin(1.0f, m)));
+}
+
 float headingOf(const Vec3& v) {
     if (v.x * v.x + v.y * v.y < 1e-10f) return 0.0f;
     return rad2deg(std::atan2(v.y, v.x));

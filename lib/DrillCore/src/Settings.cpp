@@ -13,6 +13,7 @@ const char* appModeName(AppMode m) {
         case AppMode::Zero: return "Nullpunkt";
         case AppMode::Reference: return "Referenzfläche";
         case AppMode::Precision: return "Präzision";
+        case AppMode::SurfaceAngle: return "Flächenwinkel";
         default: return "?";
     }
 }
@@ -25,6 +26,7 @@ const char* appModeShort(AppMode m) {
         case AppMode::Zero: return "NULL";
         case AppMode::Reference: return "REFERENZ";
         case AppMode::Precision: return "PRÄZISION";
+        case AppMode::SurfaceAngle: return "FLÄCHENWINKEL";
         default: return "?";
     }
 }

@@ -168,6 +168,7 @@ void MainScreen::configureFilters() {
 void MainScreen::setMode(AppMode m) {
     if (m >= AppMode::Count) m = AppMode::Drill;
     mode_ = m;
+    if (lblHint_) lv_obj_align(lblHint_, LV_ALIGN_CENTER, 0, -18);
     tracker_.reset();
     autoScale_.reset();
     fx_.reset();
@@ -207,6 +208,14 @@ void MainScreen::setHold(bool on) {
         lv_obj_set_style_bg_opa(dot_, LV_OPA_TRANSP, 0);
         lv_obj_set_style_border_color(dot_, p.hold, 0);
         lv_label_set_text_fmt(lblMode_, "HOLD  %s", appModeShort(mode_));
+        // surface angle: freeze the value from before the finger pressed the display
+        if (mode_ == AppMode::SurfaceAngle && std::isfinite(pressValue_) && millis() - pressMs_ < 4000) {
+            char b[24];
+            fmtAngle(b, sizeof(b), pressValue_, false);
+            lv_label_set_text(lblBig_, b);
+            status_.valueDeg = pressValue_;
+        }
+        pressValue_ = NAN;
         lv_obj_set_style_text_color(lblMode_, p.hold, 0);
     } else {
         lv_obj_set_style_text_color(lblMode_, p.dim, 0);
@@ -673,7 +682,9 @@ void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, floa
     hide(edgeLine_, true);
     hide(chart_, true);
     hide(progress_, mode_ != AppMode::Precision);
-    if (mode_ != AppMode::Zero && mode_ != AppMode::Reference && mode_ != AppMode::Precision) hide(lblHint_, true);
+    if (mode_ != AppMode::Zero && mode_ != AppMode::Reference && mode_ != AppMode::Precision &&
+        mode_ != AppMode::SurfaceAngle)
+        hide(lblHint_, true);
     lv_obj_align(lblBig_, LV_ALIGN_CENTER, 0, 46);
     switch (mode_) {
         case AppMode::Drill:
@@ -686,6 +697,7 @@ void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, floa
         case AppMode::Zero: updateZero(s, dt); break;
         case AppMode::Reference: updateReference(s, dt); break;
         case AppMode::Precision: updatePrecision(s, dt); break;
+        case AppMode::SurfaceAngle: updateSurfaceAngle(s, dt); break;
         default: break;
     }
 }
@@ -804,4 +816,44 @@ void MainScreen::updateTempDrill(const OrientationSnapshot& s, float dt) {
     updateDeviationView(d.screenX, d.screenY, d.totalDeg, valid, profile_.toleranceDeg, dt, d.lateralFree, false);
     lv_label_set_text_fmt(lblInfo_, "±%.2g°  Bezug %+.1f°", double(profile_.toleranceDeg), double(tempElevDeg_));
     pushHistory(d.screenX, d.screenY, d.totalDeg, s, dt);
+}
+
+void MainScreen::notePress() {
+    pressValue_ = shownValue_;
+    pressMs_ = millis();
+}
+
+void MainScreen::updateSurfaceAngle(const OrientationSnapshot& s, float dt) {
+    // digital angle gauge: double tap on the first surface (temporary reference,
+    // red ring), put the device on the second surface, read the angle.
+    layoutTarget(false);
+    hide(chart_, true);
+    lv_obj_align(lblBig_, LV_ALIGN_CENTER, 0, -10);
+    const bool still = s.motion == MotionState::Still;
+    const bool valid = s.valid && s.upD.isFinite();
+    char b[32];
+    if (!tempActive_) {
+        hide(lblHint_, false);
+        lv_obj_align(lblHint_, LV_ALIGN_CENTER, 0, 40);
+        lv_label_set_text(lblHint_, "Auf Bezugsfläche legen,\ndoppelt tippen");
+        const float abs = valid ? fv_.update(supportFaceTiltDeg(s.upD), dt) : NAN;
+        fmtAngle(b, sizeof(b), abs, false);
+        lv_label_set_text(lblBig_, b);
+        lv_obj_set_style_text_color(lblBig_, theme::pal().dim, 0);
+        lv_label_set_text(lblXY_, "zur Waagerechten");
+        lv_label_set_text(lblInfo_, "");
+        shownValue_ = abs;
+        status_.valueDeg = abs;
+        return;
+    }
+    hide(lblHint_, true);
+    const float a = valid ? fv_.update(surfaceAngleDeg(tempTilt_.tiltZeroUpD(), s.upD), dt) : NAN;
+    fmtAngle(b, sizeof(b), valid ? nBig_.update(a) : NAN, false);
+    lv_label_set_text(lblBig_, b);
+    const theme::Palette& p = theme::pal();
+    lv_obj_set_style_text_color(lblBig_, !valid ? p.invalid : (still ? p.fg : p.warn), 0);
+    lv_label_set_text(lblXY_, still ? "Winkel zur Bezugsfläche" : "ruhig auflegen ...");
+    lv_label_set_text(lblInfo_, "2 s halten: Hold");
+    shownValue_ = a;
+    status_.valueDeg = a;
 }

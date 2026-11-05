@@ -2,6 +2,8 @@
 // Unit tests: level angles, drill deviation, references, relative rotation.
 #include <unity.h>
 
+#include <initializer_list>
+
 #include "../support/SyntheticImu.h"
 #include "Orientation.h"
 #include "AngleTarget.h"
@@ -215,6 +217,24 @@ void test_angle_target_zero_left_right_uses_gyro() {
     TEST_ASSERT_FALSE(r.valid);
 }
 
+void test_surface_angle_gauge() {
+    // first surface horizontal, second tilted by 37.5 deg about a horizontal edge
+    const Vec3 up1(0, 0, 1);
+    for (float a : {0.0f, 0.2f, 37.5f, 90.0f, 135.0f, 179.5f}) {
+        const Quat q = Quat::fromAxisAngle(Vec3::unitX(), deg2rad(a));
+        const Vec3 up2 = q.rotateInverse(Vec3::unitZ());
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, a, surfaceAngleDeg(up1, up2));
+    }
+    // independent of the tilt of the first surface
+    const Quat base = Quat::fromAxisAngle(Vec3::unitY(), deg2rad(12));
+    const Vec3 r1 = base.rotateInverse(Vec3::unitZ());
+    const Vec3 r2 = (base * Quat::fromAxisAngle(Vec3::unitY(), deg2rad(20))).rotateInverse(Vec3::unitZ());
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 20.0f, surfaceAngleDeg(r1, r2));
+    // support face tilt
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, 0.0f, supportFaceTiltDeg(Vec3(0, 0, -1)));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, supportFaceTiltDeg(Vec3(0, std::cos(deg2rad(10)), std::sin(deg2rad(10)))));
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_level_angles_flat_and_edge);
@@ -229,5 +249,6 @@ int main(int, char**) {
     RUN_TEST(test_angle_target_absolute);
     RUN_TEST(test_angle_target_zero_up_down_is_gravity_based);
     RUN_TEST(test_angle_target_zero_left_right_uses_gyro);
+    RUN_TEST(test_surface_angle_gauge);
     return UNITY_END();
 }

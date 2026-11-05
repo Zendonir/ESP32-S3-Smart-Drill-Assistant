@@ -549,7 +549,7 @@ void WebApi::hMode() {
     JsonDocument d;
     if (!parseBody(*http_, d)) return sendError(400, "invalid_json", "JSON-Objekt erwartet");
     const int m = d["mode"] | -1;
-    if (m < 0 || m >= int(AppMode::Count)) return sendError(422, "invalid_value", "mode 0..5");
+    if (m < 0 || m >= int(AppMode::Count)) return sendError(422, "invalid_value", "mode 0..6");
     UiCommand c{};
     c.type = UiCommand::Type::SetMode;
     c.i = m;

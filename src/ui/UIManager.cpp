@@ -21,6 +21,8 @@ constexpr uint32_t kGestureTapBlockMs = 350;
 uint32_t g_lastGestureMs = 0;
 uint32_t g_pressStartMs = 0;
 bool g_unlockFired = false;
+bool g_holdFired = false;
+constexpr uint32_t kSurfaceHoldPressMs = 2000;
 
 const float kTolerances[] = {0.05f, 0.1f, 0.2f, 0.5f, 1.0f, 2.0f, 5.0f};
 constexpr int kTolCount = sizeof(kTolerances) / sizeof(kTolerances[0]);
@@ -579,11 +581,19 @@ void UIManager::mainEvent(lv_event_t* e) {
         case LV_EVENT_PRESSED:
             g_pressStartMs = millis();
             g_unlockFired = false;
+            g_holdFired = false;
+            self->main_.notePress();
             break;
         case LV_EVENT_LONG_PRESSED_REPEAT:
             if (self->touchLocked_ && !g_unlockFired && millis() - g_pressStartMs > 2500) {
                 g_unlockFired = true;
                 self->setTouchLock(false);
+            }
+            // surface angle gauge: hold 2 s = hold on/off
+            if (!self->touchLocked_ && !autoLock && !g_holdFired && self->main_.mode() == AppMode::SurfaceAngle &&
+                millis() - g_pressStartMs > kSurfaceHoldPressMs) {
+                g_holdFired = true;
+                self->toggleHold();
             }
             break;
         case LV_EVENT_LONG_PRESSED:
@@ -591,6 +601,7 @@ void UIManager::mainEvent(lv_event_t* e) {
                 if (self->touchLocked_) self->main_.showToast("Gesperrt: weiter halten", 900);
                 break;
             }
+            if (self->main_.mode() == AppMode::SurfaceAngle) break;  // 2 s press handled above
             self->onLongPress();
             break;
         case LV_EVENT_SHORT_CLICKED:
@@ -632,7 +643,8 @@ void UIManager::onTap() {
 }
 
 void UIManager::onDoubleTap() {
-    if (settings_.system.doubleTap == 1 || hold_) {
+    // the surface angle gauge always needs the reference on double tap
+    if (hold_ || (settings_.system.doubleTap == 1 && main_.mode() != AppMode::SurfaceAngle)) {
         toggleHold();
         return;
     }

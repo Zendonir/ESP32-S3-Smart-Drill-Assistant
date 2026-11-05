@@ -32,6 +32,17 @@ LevelAngles levelAngles(const Vec3& upD);
 /// Drift free, but blind to rotations about the vertical.
 void relativeTilt(const Vec3& upRefD, const Vec3& upD, float& relXDeg, float& relYDeg);
 
+/// Angle between two surfaces measured one after the other with the same device
+/// face (digital angle gauge): angle between the two gravity directions in the
+/// device frame, 0..180 deg. Gravity based and drift free; like every gravity
+/// gauge it measures the full angle only if the common edge of the surfaces is
+/// horizontal (a rotation about the vertical is not observable).
+float surfaceAngleDeg(const Vec3& upRefD, const Vec3& upD);
+
+/// Angle of the face the device rests on against the horizontal (0..90 deg):
+/// the device axis closest to the vertical defines the support face.
+float supportFaceTiltDeg(const Vec3& upD);
+
 // ---------------------------------------------------------------------------
 // Drill axis geometry
 // ---------------------------------------------------------------------------

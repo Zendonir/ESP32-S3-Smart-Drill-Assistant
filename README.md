@@ -24,7 +24,7 @@ arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optio
 | Adaptive Filterung | Stillstands-, Bewegungs- und Vibrationserkennung. Bei Vibration wird der Beschleunigungssensor geringer gewichtet, die steigende Unsicherheit wird angezeigt, und ein grünes Signal ist dann gesperrt. Im Stillstand wird der Gyro-Bias nachgeführt. Anzeigeglättung mit One-Euro-Filter |
 | Qualität | Stabil / Bewegung / Vibration / Kalibrierung erforderlich / Sensor gestört / Orientierung eingeschränkt / Referenz evtl. gedriftet, jeweils aus Messgrößen abgeleitet |
 | Kalibrierung | Gyro-Offset und -Rauschen, 6-Lagen-Kalibrierung des Beschleunigungssensors (Offset und Skala, optional volle 3×3-Matrix), Temperaturtabellen mit Interpolation, Montagekalibrierung (V-Nut-Rollverfahren oder Bohrständer), Profile |
-| Modi | Bohrassistent, Wasserwaage (Dosen- und Kantenlibelle), Winkelmesser mit Verlauf, Nullpunkt (Neigung oder 3D), Referenzfläche (nur Neigung oder 3D), Präzisionsmodus, Winkel-Hold mit Speichern |
+| Modi | Bohrassistent, Wasserwaage (Dosen- und Kantenlibelle), Winkelmesser mit Verlauf, Nullpunkt (Neigung oder 3D), Referenzfläche (nur Neigung oder 3D), Präzisionsmodus, Flächenwinkel (Winkel zwischen zwei Flächen), Winkel-Hold mit Speichern |
 | UI | LVGL 8.3 für das runde Display mit sicherer Anzeigezone, Schnellmenü, Gesten, Touchsperre, komplettem Einstellungsbaum, Kalibrier-Assistenten und Diagnoseseite |
 | Netzwerk | WLAN aus/AP/Client mit AP-Fallback, mDNS, REST-API mit Basic-Auth und Sperre nach Fehlversuchen, WebSocket-Livedaten mit Token, eingebettete Weboberfläche |
 | Updates | USB-C und OTA (Upload über die Weboberfläche). Zwei OTA-Slots und Bootloader-Rollback: Ein neues Image bestätigt sich erst nach bestandenem Selbsttest und 30 s stabilem Lauf |
@@ -193,3 +193,12 @@ Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten
 | Referenzfläche | Lage beim Doppeltippen als Fläche (nur Neigung) |
 | Winkelmesser | Winkel relativ zur Achse beim Doppeltippen |
 | Präzision | Messwert minus Achsneigung beim Doppeltippen |
+
+### Flächenwinkel (Winkel zwischen zwei Flächen)
+
+1. Gerät auf die Bezugsfläche legen und **doppelt tippen**: Der rote Ring zeigt den Bezug.
+2. Gerät mit derselben Seite auf die zu messende Fläche legen: Der Winkel zwischen beiden Flächen wird angezeigt (0–180°). Orange heißt: Gerät liegt noch nicht ruhig.
+3. **2 s auf das Display drücken**: Hold (blauer Ring). Der Wert bleibt stehen, auch wenn man das Gerät wegnimmt. Es wird der Wert von *vor* dem Drücken eingefroren, damit der Fingerdruck das Ergebnis nicht verfälscht.
+4. Nochmal 2 s drücken oder doppelt tippen beendet Hold. Doppelt tippen ohne Hold löscht den Bezug.
+
+Ohne Bezug zeigt der Modus den Winkel der Auflagefläche zur Waagerechten. Wie bei jedem schwerkraftbasierten Winkelmesser stimmt der Winkel nur, wenn die gemeinsame Kante der beiden Flächen waagerecht liegt (z. B. Tischplatte und schräges Brett, Boden und Wand). Ein Drehen um die Senkrechte ist ohne Kompass nicht messbar.

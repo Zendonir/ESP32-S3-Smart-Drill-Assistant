@@ -43,6 +43,10 @@ public:
     /// the measurement service are not touched. Returns the new state.
     bool toggleTempReference();
     bool tempReference() const { return tempActive_; }
+    /// Touch press started: remember the value shown before the finger touched
+    /// the display (pressing on the device tilts it slightly). Used when hold is
+    /// switched on by a long press.
+    void notePress();
     bool hold() const { return hold_; }
     /// Long press action of the current mode (zero / capture / start).
     void primaryAction();
@@ -113,6 +117,10 @@ private:
     float tempElevDeg_ = NAN;          ///< drill axis elevation at the double tap
     float tempInclDeg_ = NAN;          ///< drill axis inclination at the double tap
     void updateTempDrill(const sda::OrientationSnapshot& s, float dt);
+    void updateSurfaceAngle(const sda::OrientationSnapshot& s, float dt);
+    float shownValue_ = NAN;           ///< surface angle as displayed (last frame)
+    float pressValue_ = NAN;           ///< shownValue_ when the touch press started
+    uint32_t pressMs_ = 0;
     sda::RepeatabilityTracker repeat_;
     uint32_t lastPrecisionSeq_ = 0;
     int lastTargetState_ = -1;

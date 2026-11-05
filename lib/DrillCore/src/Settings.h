@@ -25,7 +25,7 @@ constexpr uint16_t kCalibrationVersion = 1;
 constexpr int kMaxProfiles = 8;
 constexpr int kProfileNameLen = 20;
 
-enum class AppMode : uint8_t { Drill = 0, Level, Angle, Zero, Reference, Precision, Count };
+enum class AppMode : uint8_t { Drill = 0, Level, Angle, Zero, Reference, Precision, SurfaceAngle, Count };
 const char* appModeName(AppMode m);
 const char* appModeShort(AppMode m);
 
