@@ -108,6 +108,7 @@ void settingsToJson(const AppSettings& s, JsonObject o, bool secrets) {
     char axis[8];
     s.system.axisMap.format(axis);
     y["axisMap"] = axis;
+    y["axisMapVerified"] = s.system.axisMapVerified;
     y["logLevel"] = s.system.logLevel;
     y["batteryDividerFactor"] = s.system.batteryDividerFactor;
     y["lowBatteryV"] = s.system.lowBatteryV;
@@ -176,6 +177,7 @@ bool settingsFromJson(JsonObjectConst o, AppSettings& out) {
             if (!ax.is<const char*>() || !am.parse(ax.as<const char*>())) ok = false;
             else s.system.axisMap = am;
         }
+        ok &= getBool(y, "axisMapVerified", s.system.axisMapVerified);
         ok &= getNum(y, "logLevel", s.system.logLevel);
         ok &= getNum(y, "batteryDividerFactor", s.system.batteryDividerFactor);
         ok &= getNum(y, "lowBatteryV", s.system.lowBatteryV);

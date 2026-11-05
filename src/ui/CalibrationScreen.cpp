@@ -4,6 +4,7 @@
 #include <Arduino.h>
 
 #include <cstdio>
+#include <cstring>
 
 #include "../system/Log.h"
 #include "Theme.h"
@@ -135,6 +136,14 @@ void CalibrationScreen::open(AppContext& app, Kind kind, std::function<void()> o
             setButtons("Abbr.", nullptr, "Erfassen");
             app.meas.startMountCalibration(CalProcedure::MountVertical);
             break;
+        case Kind::AxisDetect:
+            lv_label_set_text(title_, "Achsen erkennen");
+            setButtons("Abbr.", nullptr, nullptr);
+            axisStep_ = 0;
+            axisFrames_ = 0;
+            axisSum_ = Vec3();
+            axisOld_ = app.settings.get().system.axisMap;
+            break;
     }
     lv_scr_load(scr_);
     if (old) lv_obj_del_async(old);
@@ -162,7 +171,55 @@ void CalibrationScreen::update(const OrientationSnapshot& s) {
         case Kind::AccelExtended: updateAccel(s); break;
         case Kind::MountRoll:
         case Kind::MountVertical: updateMount(s); break;
+        case Kind::AxisDetect: updateAxis(s); break;
     }
+}
+
+// Two still positions are averaged in SENSOR coordinates (the current mapping is
+// undone), the mapping is then derived by detectAxisMap().
+void CalibrationScreen::updateAxis(const OrientationSnapshot& s) {
+    if (phase_ != Phase::Running) return;
+    constexpr int kFrames = 40;  // ~1 s at the UI rate
+    lv_label_set_text(text_, axisStep_ == 0 ? "Display nach OBEN\nflach hinlegen"
+                                            : "Aufrecht hinstellen,\ndieser Text lesbar");
+    if (!s.valid || s.motion != MotionState::Still) {
+        axisFrames_ = 0;
+        axisSum_ = Vec3();
+        lv_arc_set_value(arc_, 0);
+        lv_label_set_text(detail_, axisStep_ == 0 ? "Schritt 1/2 - ruhig liegen lassen" : "Schritt 2/2 - ruhig halten");
+        return;
+    }
+    // device frame (current mapping) -> sensor frame
+    axisSum_ += axisOld_.matrix().transposed() * s.rawAccelG;
+    ++axisFrames_;
+    lv_arc_set_value(arc_, static_cast<int16_t>(1000 * axisFrames_ / kFrames));
+    if (axisFrames_ < kFrames) return;
+    const Vec3 mean = axisSum_ / float(axisFrames_);
+    axisFrames_ = 0;
+    axisSum_ = Vec3();
+    if (axisStep_ == 0) {
+        axisFlatS_ = mean;
+        axisStep_ = 1;
+        lv_arc_set_value(arc_, 0);
+        return;
+    }
+    axisResult_ = detectAxisMap(axisFlatS_, mean);
+    if (!axisResult_.ok) {
+        phase_ = Phase::Failed;
+        lv_label_set_text(text_, "Nicht erkannt");
+        lv_label_set_text_fmt(detail_, "%s.\nLagen genauer einnehmen.", axisResult_.error);
+        setButtons(nullptr, "Zurück", nullptr);
+        return;
+    }
+    phase_ = Phase::Result;
+    char nb[8], ob[8];
+    axisResult_.map.format(nb);
+    axisOld_.format(ob);
+    const bool same = std::memcmp(axisResult_.map.code, axisOld_.code, 3) == 0;
+    lv_label_set_text_fmt(text_, "Zuordnung\n%s", nb);
+    lv_label_set_text_fmt(detail_, "%s (bisher %s)\nLagefehler %.1f°", same ? "unverändert" : "geändert", ob,
+                          double(axisResult_.orthogonalityErrDeg));
+    setButtons("Verwerfen", nullptr, "Speichern");
 }
 
 void CalibrationScreen::updateGyro(const OrientationSnapshot& s) {
@@ -296,6 +353,17 @@ void CalibrationScreen::onMid() {
 
 void CalibrationScreen::onRight() {
     const uint8_t active = app_->settings.get().system.activeProfile;
+    if (kind_ == Kind::AxisDetect) {
+        if (phase_ != Phase::Result) return;
+        const AxisMap m = axisResult_.map;
+        // UIManager::applySettings remaps the calibration and reconfigures the pipeline
+        app_->settings.update([m](AppSettings& st) {
+            st.system.axisMap = m;
+            st.system.axisMapVerified = true;
+        });
+        finish(true);
+        return;
+    }
     if (phase_ == Phase::Running && (kind_ == Kind::MountRoll || kind_ == Kind::MountVertical)) {
         OrientationSnapshot s;
         app_->meas.snapshot(s);

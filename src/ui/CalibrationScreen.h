@@ -14,7 +14,7 @@
 
 class CalibrationScreen {
 public:
-    enum class Kind { Gyro, Accel, AccelExtended, MountRoll, MountVertical };
+    enum class Kind { Gyro, Accel, AccelExtended, MountRoll, MountVertical, AxisDetect };
     void open(AppContext& app, Kind kind, std::function<void()> onDone);
     void update(const sda::OrientationSnapshot& s);
     bool isOpen() const { return scr_ != nullptr; }
@@ -43,6 +43,14 @@ private:
     sda::AccelCalPoint accelResult_;
     sda::MountFitResult mountResult_;
     bool haveBefore_ = false;
+    // axis detection
+    int axisStep_ = 0;
+    int axisFrames_ = 0;
+    sda::Vec3 axisSum_;
+    sda::Vec3 axisFlatS_;
+    sda::AxisMap axisOld_;
+    sda::AxisDetectResult axisResult_;
+    void updateAxis(const sda::OrientationSnapshot& s);
 
     lv_obj_t* button(const char* text, int x, int y, int w, lv_event_cb_t cb);
     void setButtons(const char* left, const char* mid, const char* right);

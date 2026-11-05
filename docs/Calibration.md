@@ -11,6 +11,20 @@ Die Kalibrierung hat zwei getrennte Ebenen:
 Ein Werksreset löscht Einstellungen und Profile. Die Sensorkalibrierung bleibt erhalten,
 sie wird separat unter Kalibrierung › „Kalibr. löschen“ gelöscht.
 
+## 0. Achsenzuordnung (Menü › Kalibrierung › Achsen erkennen)
+
+Dieser Schritt kommt vor allen anderen.
+Er bestimmt, wie die Sensorachsen des QMI8658 auf die Geräteachsen fallen (X rechts, Y oben, Z aus dem Display).
+Dafür misst die Firmware zwei Ruhelagen, jeweils etwa 1 s:
+
+1. Display flach nach oben: Die Schwerkraftachse ergibt Z.
+2. Aufrecht, Text lesbar: Die Schwerkraftachse ergibt Y.
+
+X folgt daraus als Y × Z, die Zuordnung ist also immer eine echte Drehung.
+Jede Lage muss innerhalb von 25° an einer Sensorachse liegen.
+Der angezeigte „Lagefehler“ ist die Abweichung der beiden Messungen von 90°.
+Beim Speichern rechnet die Firmware Gyro-Bias und Beschleunigungskalibrierung exakt in den neuen Rahmen um (M' = R·M·Rᵀ, c' = R·c, b' = R·b).
+
 ## 1. Gyroskop (Menü › Kalibrierung › Gyroskop)
 
 Ablauf:

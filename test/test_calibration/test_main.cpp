@@ -4,6 +4,7 @@
 #include <unity.h>
 
 #include "../support/SyntheticImu.h"
+#include "CoordinateTransforms.h"
 #include "MountCalibration.h"
 #include "SensorCalibration.h"
 
@@ -230,6 +231,59 @@ void test_mount_vertical() {
     TEST_ASSERT_FALSE(MountCalibrator::solveVertical(Vec3(0, 0, 0.3f)).ok);
 }
 
+void test_axis_detection_all_24_mappings() {
+    const int perms[6][3] = {{1, 2, 3}, {1, 3, 2}, {2, 1, 3}, {2, 3, 1}, {3, 1, 2}, {3, 2, 1}};
+    int tested = 0;
+    for (const auto& p : perms)
+        for (int signs = 0; signs < 8; ++signs) {
+            AxisMap truth;
+            for (int i = 0; i < 3; ++i) truth.code[i] = int8_t((signs & (1 << i)) ? -p[i] : p[i]);
+            if (!truth.isValid()) continue;
+            // sensor readings: s = A^T d, with a few degrees of placement error
+            const Mat3 At = truth.matrix().transposed();
+            const Quat tilt = Quat::fromAxisAngle(Vec3(1, 0.4f, 0.2f), deg2rad(6));
+            const Vec3 flatS = At * tilt.rotate(Vec3(0, 0, 1));
+            const Vec3 uprightS = At * tilt.rotate(Vec3(0, 1, 0));
+            const AxisDetectResult r = detectAxisMap(flatS, uprightS);
+            TEST_ASSERT_TRUE(r.ok);
+            for (int i = 0; i < 3; ++i) TEST_ASSERT_EQUAL(truth.code[i], r.map.code[i]);
+            ++tested;
+        }
+    TEST_ASSERT_EQUAL(24, tested);
+    TEST_ASSERT_FALSE(detectAxisMap(Vec3(0, 0, 1), Vec3(0, 0, 1)).ok);          // same pose twice
+    TEST_ASSERT_FALSE(detectAxisMap(Vec3(0.7f, 0, 0.7f), Vec3(0, 1, 0)).ok);    // ambiguous (45 deg)
+}
+
+void test_calibration_remap_follows_axis_map() {
+    // calibration determined with a wrong mapping must give identical physical
+    // results after the mapping is corrected and the calibration remapped
+    AxisMap oldMap, newMap;
+    TEST_ASSERT_TRUE(newMap.parse("-Y+X+Z"));
+    SensorCalibration c;
+    GyroCalPoint g;
+    g.tempC = 25;
+    g.biasDps = Vec3(0.3f, -0.7f, 0.1f);
+    g.noiseDps = Vec3(0.01f, 0.02f, 0.03f);
+    c.addGyroPoint(g);
+    AccelCalPoint a;
+    a.tempC = 25;
+    a.matrix = Mat3::fromRows(Vec3(1.02f, 0.01f, 0), Vec3(0, 0.98f, 0.02f), Vec3(0.01f, 0, 1.01f));
+    a.offset = Vec3(0.02f, -0.03f, 0.01f);
+    c.addAccelPoint(a);
+    const Vec3 sensorAcc(0.1f, 0.5f, 0.85f), sensorGyro(1.0f, 2.0f, 3.0f);
+    const Vec3 oldA = c.applyAccel(oldMap.apply(sensorAcc), 25), oldG = c.applyGyro(oldMap.apply(sensorGyro), 25);
+    const Mat3 R = axisRemapRotation(oldMap, newMap);
+    SensorCalibration c2 = c;
+    c2.remap(R);
+    const Vec3 newA = c2.applyAccel(newMap.apply(sensorAcc), 25), newG = c2.applyGyro(newMap.apply(sensorGyro), 25);
+    const Vec3 expA = R * oldA, expG = R * oldG;
+    for (int i = 0; i < 3; ++i) {
+        TEST_ASSERT_FLOAT_WITHIN(1e-5f, expA[i], newA[i]);
+        TEST_ASSERT_FLOAT_WITHIN(1e-5f, expG[i], newG[i]);
+    }
+    TEST_ASSERT_TRUE(c2.validate());
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_gyro_calibration_estimates_bias_and_noise);
@@ -243,5 +297,7 @@ int main(int, char**) {
     RUN_TEST(test_mount_roll_fit);
     RUN_TEST(test_mount_roll_fit_poor_coverage);
     RUN_TEST(test_mount_vertical);
+    RUN_TEST(test_axis_detection_all_24_mappings);
+    RUN_TEST(test_calibration_remap_follows_axis_map);
     return UNITY_END();
 }

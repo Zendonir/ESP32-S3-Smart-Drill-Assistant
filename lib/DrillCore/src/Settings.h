@@ -80,6 +80,7 @@ struct SystemSettings {
     ButtonAction bootButton = ButtonAction::Hold;
     bool powerOnHold = true;      ///< switching on requires holding BOOT for 1 s
     AxisMap axisMap;              ///< sensor -> device axis mapping
+    bool axisMapVerified = false; ///< set by the axis detection wizard
     uint8_t logLevel = 2;         ///< 0 error .. 3 debug
     float batteryDividerFactor = 3.0f;
     float lowBatteryV = 3.50f;

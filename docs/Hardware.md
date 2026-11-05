@@ -62,15 +62,15 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
    * Grau 12 % muss deutlich dunkler sein als Grau 38 %.
 4. **Touch.** Diagnose › „Touch x/y“ zeigt die Koordinate unter dem Finger
    (oben links ≈ 0/0). Stimmt sie nicht, `kTouchSwapXY`/`kTouchInvertX/Y` anpassen.
-5. **IMU-Achsen.** Das Gerätekoordinatensystem ist X = rechts, Y = oben,
-   Z = aus dem Display heraus. Diagnose › „a raw“:
-   * Display flach nach oben → `a raw ≈ 0 0 +1`
-   * auf die untere Kante gestellt (oben = oben) → `≈ 0 +1 0`
-   * auf die linke Kante gestellt (rechte Kante oben) → `≈ +1 0 0`
+5. **IMU-Achsen.** Menü › Kalibrierung › **Achsen erkennen**:
+   1. Gerät mit dem Display nach oben flach hinlegen.
+   2. Danach aufrecht hinstellen, sodass der Text auf dem Display lesbar ist.
 
-   Weicht das ab, unter Einstellungen › System › „Achsen S→D“ die passende
-   Zuordnung wählen (alle 24 echten Drehungen stehen zur Auswahl). Danach die
-   6-Lagen-Kalibrierung wiederholen.
+   Die Firmware bestimmt daraus, wie der QMI8658 auf der Platine sitzt (alle 24 möglichen Lagen) und zeigt die Zuordnung an, z. B. `-Y+X+Z`.
+   Eine bereits vorhandene Kalibrierung wird beim Speichern in das korrigierte Koordinatensystem umgerechnet und bleibt gültig.
+   Gesetzte Nullpunkte werden gelöscht.
+   Wird später die Displayrotation geändert, muss der Assistent erneut laufen, denn „oben“ ist die angezeigte Oberkante.
+   Manuell geht es auch: Einstellungen › System › „Achsen S→D“.
 6. **Abtastrate.** Diagnose › „Rate“ liegt bei etwa 220–230 Hz, und die Zahl der
    verlorenen Samples steigt im Ruhebetrieb nicht.
 7. **Akku.** Die Akkuspannung mit einem Multimeter messen, mit Einstellungen › System ›

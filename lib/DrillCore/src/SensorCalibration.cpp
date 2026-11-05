@@ -174,6 +174,20 @@ bool SensorCalibration::accelTempCompActive() const {
     return accelCount_ >= 2 && (accel_[accelCount_ - 1].tempC - accel_[0].tempC) >= 3.0f;
 }
 
+void SensorCalibration::remap(const Mat3& R) {
+    const Mat3 Rt = R.transposed();
+    for (int i = 0; i < gyroCount_; ++i) {
+        gyro_[i].biasDps = R * gyro_[i].biasDps;
+        const Vec3 n = R * gyro_[i].noiseDps;  // per-axis magnitudes follow the permutation
+        gyro_[i].noiseDps = Vec3(std::fabs(n.x), std::fabs(n.y), std::fabs(n.z));
+    }
+    for (int i = 0; i < accelCount_; ++i) {
+        // a_cal = M a_raw + c  in the old frame  ->  R a_cal = (R M R^T)(R a_raw) + R c
+        accel_[i].matrix = R * accel_[i].matrix * Rt;
+        accel_[i].offset = R * accel_[i].offset;
+    }
+}
+
 bool SensorCalibration::validate() const {
     if (gyroCount_ < 0 || gyroCount_ > kMaxGyroCalPoints) return false;
     if (accelCount_ < 0 || accelCount_ > kMaxAccelCalPoints) return false;

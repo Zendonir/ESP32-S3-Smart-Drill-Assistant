@@ -99,6 +99,62 @@ bool MountModel::isValid() const {
            std::fabs(angleCorrectionDeg) <= 10.0f;
 }
 
+namespace {
+/// Signed dominant axis of v (code 1..3, negative = inverted), 0 if not unique.
+int dominantAxis(const Vec3& v, float cosLimit) {
+    const float n = v.norm();
+    if (!(n > 0.5f)) return 0;
+    int idx = 0;
+    for (int i = 1; i < 3; ++i)
+        if (std::fabs(v[i]) > std::fabs(v[idx])) idx = i;
+    if (std::fabs(v[idx]) / n < cosLimit) return 0;
+    return v[idx] > 0 ? idx + 1 : -(idx + 1);
+}
+
+Vec3 axisVector(int code) {
+    Vec3 v;
+    v[std::abs(code) - 1] = code > 0 ? 1.0f : -1.0f;
+    return v;
+}
+}  // namespace
+
+AxisDetectResult detectAxisMap(const Vec3& upFlatS, const Vec3& upUprightS) {
+    AxisDetectResult r;
+    const float cosLim = std::cos(25.0f * kPi / 180.0f);
+    const int z = dominantAxis(upFlatS, cosLim);
+    const int y = dominantAxis(upUprightS, cosLim);
+    if (z == 0) {
+        r.error = "Flachlage nicht eindeutig";
+        return r;
+    }
+    if (y == 0) {
+        r.error = "Aufrecht-Lage nicht eindeutig";
+        return r;
+    }
+    if (std::abs(z) == std::abs(y)) {
+        r.error = "Beide Lagen gleich";
+        return r;
+    }
+    const Vec3 ez = axisVector(z), ey = axisVector(y);
+    const int x = dominantAxis(ey.cross(ez), 0.9f);
+    AxisMap m;
+    m.code[0] = static_cast<int8_t>(x);
+    m.code[1] = static_cast<int8_t>(y);
+    m.code[2] = static_cast<int8_t>(z);
+    if (!m.isValid()) {
+        r.error = "Ungültige Zuordnung";
+        return r;
+    }
+    r.map = m;
+    r.orthogonalityErrDeg = std::fabs(angleBetween(upFlatS, upUprightS) * 180.0f / kPi - 90.0f);
+    r.ok = true;
+    return r;
+}
+
+Mat3 axisRemapRotation(const AxisMap& oldMap, const AxisMap& newMap) {
+    return newMap.matrix() * oldMap.matrix().transposed();
+}
+
 Vec3 mountPresetAxis(MountPreset p) {
     switch (p) {
         case MountPreset::ScreenFacingUser: return {0, 0, -1};

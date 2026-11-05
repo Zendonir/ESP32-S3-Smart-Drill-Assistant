@@ -74,6 +74,10 @@ public:
     void clearAccel() { accelCount_ = 0; }
     void clearAll() { clearGyro(); clearAccel(); }
 
+    /// Re-expresses the calibration in a rotated device frame (v_new = R v_old),
+    /// e.g. after the sensor axis mapping was corrected. R must be a rotation.
+    void remap(const Mat3& R);
+
     /// Plausibility check (used after loading from flash).
     bool validate() const;
 

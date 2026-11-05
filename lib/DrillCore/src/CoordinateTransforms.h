@@ -34,6 +34,24 @@ struct AxisMap {
     void format(char* out) const;
 };
 
+/// Automatic determination of the sensor->device axis mapping from two still
+/// gravity measurements in SENSOR coordinates:
+///   upFlatS     - device lying flat, display facing up      (device +Z = up)
+///   upUprightS  - device upright, displayed text readable   (device +Y = up)
+/// Each measurement must be within 25 deg of a sensor axis; the two must use
+/// different axes. Device X follows from Y x Z (always a proper rotation).
+struct AxisDetectResult {
+    bool ok = false;
+    AxisMap map;
+    float orthogonalityErrDeg = 0.0f;  ///< |angle(upFlat, upUpright) - 90 deg|
+    const char* error = "";
+};
+AxisDetectResult detectAxisMap(const Vec3& upFlatS, const Vec3& upUprightS);
+
+/// Rotation that converts device-frame vectors of the old mapping into the new one:
+/// v_new = R * v_old with R = A_new * A_old^T.
+Mat3 axisRemapRotation(const AxisMap& oldMap, const AxisMap& newMap);
+
 /// Mounting model of the device on a tool. Stores the drill axis in device
 /// coordinates and derives an orthonormal display basis perpendicular to it.
 struct MountModel {

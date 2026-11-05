@@ -9,7 +9,7 @@ einer kreisförmigen Zielanzeige, wie weit die Bohrachse vom Sollwinkel abweicht
 arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optional.
 
 > **Stand der Verifikation:** Die Firmware wird mit PlatformIO vollständig gebaut, und die
-> hardwareunabhängige Messbibliothek ist mit 77 Unit-Tests auf dem Host geprüft.
+> hardwareunabhängige Messbibliothek ist mit 79 Unit-Tests auf dem Host geprüft.
 > **Auf echter Hardware ist sie noch nicht getestet.** Pinbelegung, Achsorientierung des
 > QMI8658, Farbinvertierung des Displays, Touch-Orientierung und Akku-Spannungsteiler
 > müssen am konkreten Board geprüft werden, siehe [docs/Hardware.md](docs/Hardware.md)
@@ -133,7 +133,7 @@ Bei den absoluten Bezügen und bei „oben/unten“ ist die seitliche Richtung f
 In diesem Fall zeigt die Anzeige die geschätzte Drift (±°) und das Alter des Nullpunkts. Grün gibt es nur, solange die geschätzte Drift in die Toleranz passt; sonst neu nullen.
 Ist die Bezugsachse fast senkrecht (näher als 10° am Lot), ist „links/rechts“ nicht definiert, und das Gerät meldet das.
 
-Erstinbetriebnahme: Menü › Kalibrierung › **Gyroskop**, dann **Sensor 6 Lagen**,
+Erstinbetriebnahme: Menü › Kalibrierung › **Achsen erkennen** (Display flach nach oben, dann aufrecht hinstellen), dann **Gyroskop**, dann **Sensor 6 Lagen**,
 dann **Montage** (V-Nut oder Ständer). Details stehen in [docs/Calibration.md](docs/Calibration.md).
 
 ## Projektstruktur

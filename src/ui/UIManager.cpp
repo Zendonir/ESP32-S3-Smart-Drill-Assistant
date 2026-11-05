@@ -69,6 +69,8 @@ void UIManager::start() {
         bootList_ = nullptr;
     }
     if (!app_->boot.imu) main_.showToast("Sensor QMI8658 nicht gefunden!", 6000);
+    else if (!settings_.system.axisMapVerified)
+        main_.showToast("Erst einrichten:\nMenü > Kalibrierung >\nAchsen erkennen", 5000);
     else if (!app_->boot.calibrationLoaded) main_.showToast("Sensor nicht kalibriert.\nMenü > Kalibrierung", 4000);
     if (app_->boot.imu && settings_.measurement.startupGyroCal == StartupGyroCal::Always) {
         // mandatory start-up calibration with guidance on screen
@@ -344,7 +346,21 @@ void UIManager::applySettings(bool initial) {
         bool cfgChange = std::memcmp(&old.system.axisMap, &settings_.system.axisMap, sizeof(AxisMap)) != 0 ||
                          old.measurement.onlineBiasTracking != settings_.measurement.onlineBiasTracking ||
                          old.measurement.tempCoeffAssumedDpsPerK != settings_.measurement.tempCoeffAssumedDpsPerK;
+        const bool axisChange = std::memcmp(&old.system.axisMap, &settings_.system.axisMap, sizeof(AxisMap)) != 0;
+        if (axisChange) {
+            // keep existing calibration valid: express it in the corrected device frame
+            SensorCalibration c;
+            if (app_->meas.currentCalibration(c) && (c.hasGyro() || c.hasAccel())) {
+                c.remap(axisRemapRotation(old.system.axisMap, settings_.system.axisMap));
+                app_->meas.setCalibration(c);
+                app_->calStore.save(c);
+            }
+            app_->meas.clearReference();  // zero points refer to the old frame
+            LOGI(TAG, "axis mapping changed, calibration remapped");
+        }
         if (cfgChange) app_->meas.setConfig(app_->pipelineConfig(settings_));
+        if (old.display.rotation != settings_.display.rotation && settings_.system.axisMapVerified)
+            showMessage("Anzeige gedreht:\nKalibrierung > Achsen\nerkennen erneut ausführen", 4000);
         if (old.system.activeProfile != settings_.system.activeProfile) applyProfile();
         if (old.measurement.lastMode != settings_.measurement.lastMode && main_.mode() != settings_.measurement.lastMode)
             setMode(settings_.measurement.lastMode, false);

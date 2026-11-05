@@ -133,6 +133,8 @@ void UIManager::menuCalibration() {
     menu_.open(
         "Kalibrierung",
         {
+            MenuItem::act("Achsen erkennen", [this] { openCalibration(CalibrationScreen::Kind::AxisDetect); },
+                          [this] { return std::string(app_->settings.get().system.axisMapVerified ? "ok" : "!"); }),
             MenuItem::act("Gyroskop", [this] { openCalibration(CalibrationScreen::Kind::Gyro); }),
             MenuItem::act("Sensor 6 Lagen", [this] { openCalibration(CalibrationScreen::Kind::Accel); }),
             MenuItem::act("6 Lagen erweitert", [this] { openCalibration(CalibrationScreen::Kind::AccelExtended); }),
