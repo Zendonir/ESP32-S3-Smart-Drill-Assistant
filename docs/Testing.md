@@ -5,6 +5,7 @@
 ```bash
 pio test -e native                # PlatformIO + Unity
 scripts/run_host_tests.sh         # g++ -Werror, AddressSanitizer + UBSan
+tools/render_check/menu_preview.cpp  # rendert ein Menü auf dem Host als Bild (Layoutkontrolle)
 scripts/check_fonts.sh            # LVGL mit der Firmware-lv_conf.h auf dem Host: Text in jeder Schrift muss Pixel erzeugen
 ```
 

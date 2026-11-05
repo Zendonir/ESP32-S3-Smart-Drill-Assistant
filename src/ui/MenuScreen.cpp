@@ -127,18 +127,32 @@ void MenuScreen::open(const std::string& title, std::vector<MenuItem> items, Bac
         lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, ud);
         lv_obj_set_user_data(b, reinterpret_cast<void*>(idx));
         lv_obj_add_flag(b, LV_OBJ_FLAG_GESTURE_BUBBLE);
+        // two-line layout: label on top, value (data) below it
+        lv_obj_set_flex_flow(b, LV_FLEX_FLOW_COLUMN);
+        lv_obj_set_flex_align(b, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+        lv_obj_set_style_pad_row(b, 2, 0);
         lv_obj_t* l = theme::label(b, theme::medium(), p.fg, text);
-        lv_obj_set_width(l, 120);
+        lv_obj_set_width(l, lv_pct(100));
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
-        lv_obj_align(l, LV_ALIGN_LEFT_MID, 0, 0);
         return b;
     };
 
     addRow(LV_SYMBOL_LEFT " Zurück", backEvent, this, -1);
     for (size_t i = 0; i < items_.size(); ++i) {
         lv_obj_t* row = addRow(items_[i].label.c_str(), itemEvent, this, static_cast<intptr_t>(i));
-        lv_obj_t* v = theme::label(row, theme::small(), p.dim, "");
-        lv_obj_align(v, LV_ALIGN_RIGHT_MID, 0, 0);
+        lv_obj_t* v;
+        if (items_[i].kind == MenuItem::Kind::Submenu) {
+            // navigation arrow (not data): stays at the right edge, outside the layout
+            lv_obj_set_width(lv_obj_get_child(row, 0), lv_pct(88));
+            v = theme::label(row, theme::medium(), p.dim, "");
+            lv_obj_add_flag(v, LV_OBJ_FLAG_IGNORE_LAYOUT);
+            lv_obj_align(v, LV_ALIGN_RIGHT_MID, 0, 0);
+        } else {
+            v = theme::label(row, theme::medium(), p.accent, "");
+            lv_obj_set_width(v, lv_pct(100));
+            lv_label_set_long_mode(v, LV_LABEL_LONG_WRAP);
+            lv_obj_add_flag(v, LV_OBJ_FLAG_HIDDEN);  // shown once it has a value
+        }
         valueLabels_.push_back(v);
         if (items_[i].kind == MenuItem::Kind::Info) lv_obj_clear_flag(row, LV_OBJ_FLAG_CLICKABLE);
     }
@@ -161,7 +175,13 @@ void MenuScreen::close() {
 void MenuScreen::refresh() {
     if (!scr_) return;
     for (size_t i = 0; i < items_.size() && i < valueLabels_.size(); ++i) {
-        if (items_[i].value) lv_label_set_text(valueLabels_[i], items_[i].value().c_str());
+        if (!items_[i].value) continue;
+        const std::string v = items_[i].value();
+        lv_label_set_text(valueLabels_[i], v.c_str());
+        if (items_[i].kind != MenuItem::Kind::Submenu) {
+            if (v.empty()) lv_obj_add_flag(valueLabels_[i], LV_OBJ_FLAG_HIDDEN);
+            else lv_obj_clear_flag(valueLabels_[i], LV_OBJ_FLAG_HIDDEN);
+        }
     }
 }
 
