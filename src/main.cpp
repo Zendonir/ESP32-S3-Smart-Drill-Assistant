@@ -38,7 +38,8 @@ void setup() {
     sda_log::begin(sda_log::Level::Info);
     sda_log::startTask(appcfg::kLogTaskCore, appcfg::kLogTaskPrio, appcfg::kLogTaskStack);
     app.boot.resetReason = static_cast<int>(esp_reset_reason());
-    LOGI(TAG, "%s %s (%s) on %s, reset reason %d", SDA_FW_NAME, SDA_FW_VERSION_STR, SDA_FW_BUILD_DATE, SDA_HW_NAME,
+    LOGI(TAG, "%s %s %s (%s) on %s, reset reason %d", SDA_FW_NAME, SDA_FW_VERSION_STR, SDA_FW_COMMIT,
+         SDA_FW_BUILD_DATE, SDA_HW_NAME,
          app.boot.resetReason);
     app.boot.otaPendingVerify = ota_guard::pendingVerify();
 

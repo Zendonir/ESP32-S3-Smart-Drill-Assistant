@@ -1,16 +1,21 @@
-# Pre-build script (PlatformIO/SCons): embeds the web UI into the firmware.
-#
-# data/web/index.html is gzip compressed and written as a C array to
-# include/WebAssets.h. Embedding (instead of a LittleFS upload) guarantees that
-# firmware and web UI always match, also after OTA updates.
+# Pre-build script (PlatformIO/SCons):
+#  1. embeds the web UI into the firmware: data/web/index.html is gzip compressed
+#     and written as a C array to include/WebAssets.h. Embedding (instead of a
+#     LittleFS upload) guarantees that firmware and web UI always match, also
+#     after OTA updates.
+#  2. passes the git commit to the firmware (SDA_FW_COMMIT, shown under
+#     System > Firmware, in the diagnostics, the log and /api/status).
 import gzip
 import os
+import subprocess
 
 try:
     Import("env")  # noqa: F821  (provided by SCons)
     PROJECT_DIR = env["PROJECT_DIR"]  # noqa: F821
+    HAVE_ENV = True
 except NameError:  # executed stand-alone
     PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    HAVE_ENV = False
 
 SRC = os.path.join(PROJECT_DIR, "data", "web", "index.html")
 DST = os.path.join(PROJECT_DIR, "include", "WebAssets.h")
@@ -40,4 +45,15 @@ def generate():
         print("embed_web: %s -> %s (%d -> %d bytes)" % (SRC, DST, len(raw), len(gz)))
 
 
+def inject_commit():
+    try:
+        commit = subprocess.check_output(["git", "-C", PROJECT_DIR, "rev-parse", "--short", "HEAD"],
+                                         text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return  # no git: firmware reports "unknown"
+    if HAVE_ENV:
+        env.Append(CPPDEFINES=[("SDA_FW_COMMIT", '\\"%s\\"' % commit)])  # noqa: F821
+
+
 generate()
+inject_commit()

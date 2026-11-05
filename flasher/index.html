@@ -95,6 +95,11 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
   </div>
 
   <section class="card">
+    <h2>Letzte Änderungen</h2>
+    <table id="changes"><tr><td>–</td><td>werden geladen …</td></tr></table>
+  </section>
+
+  <section class="card">
     <h2>Inhalt dieses Builds</h2>
     <table id="parts"><tr><td>Dateien</td><td>werden geladen …</td></tr></table>
   </section>
@@ -116,6 +121,10 @@ fetch('manifest.json').then(r => r.json()).then(m => {
   document.getElementById('build').textContent = `${b.date} · ${b.commit}`;
   const rows = b.parts.map(p => `<tr><td>${p.offset}</td><td>${p.path} · ${(p.size / 1024).toFixed(0)} KB<br><code>sha256 ${p.sha256}</code></td></tr>`).join('');
   document.getElementById('parts').innerHTML = rows;
+  const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  if (b.changes && b.changes.length)
+    document.getElementById('changes').innerHTML = b.changes.map(c =>
+      `<tr><td>${c.date} · <code>${c.commit}</code></td><td>${esc(c.subject)}${c.commit === b.commit ? ' <b>(dieser Build)</b>' : ''}</td></tr>`).join('');
 }).catch(() => {
   document.getElementById('parts').innerHTML = '<tr><td>Hinweis</td><td>Build-Informationen nicht gefunden. Wurde die Seite mit scripts/build_flasher.py erzeugt?</td></tr>';
 });

@@ -316,7 +316,7 @@ void UIManager::menuSystem() {
                               p.charge == ChargeState::Charging ? " " LV_SYMBOL_CHARGE : "");
                 return std::string(b);
             }),
-            MenuItem::info("Firmware", [] { return std::string(SDA_FW_VERSION_STR); }),
+            MenuItem::info("Firmware", [] { return std::string(SDA_FW_VERSION_STR " (" SDA_FW_COMMIT ")"); }),
             MenuItem::info("Partition", [] { return std::string(ota_guard::runningPartition()); }),
             MenuItem::act("Sensorstatus", [this] { openDiagnostics(); },
                           [this] { return std::string(app_->imu.isHealthy() ? "ok" : "FEHLER"); }),

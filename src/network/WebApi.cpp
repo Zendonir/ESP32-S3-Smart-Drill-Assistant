@@ -177,6 +177,7 @@ void WebApi::hStatus() {
     app_.net.read(n);
     JsonDocument d;
     d["firmware"] = SDA_FW_VERSION_STR;
+    d["commit"] = SDA_FW_COMMIT;
     d["build"] = SDA_FW_BUILD_DATE;
     d["board"] = SDA_HW_NAME;
     d["partition"] = ota_guard::runningPartition();

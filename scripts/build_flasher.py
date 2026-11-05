@@ -140,7 +140,13 @@ def main():
     with open(os.path.join(args.out, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
+    try:
+        log = subprocess.check_output(["git", "-C", ROOT, "log", "-12", "--format=%h|%cs|%s"], text=True)
+        changes = [dict(zip(("commit", "date", "subject"), l.split("|", 2))) for l in log.strip().splitlines()]
+    except (OSError, subprocess.CalledProcessError):
+        changes = []
     info = {
+        "changes": changes,
         "version": version,
         "commit": commit,
         "date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),

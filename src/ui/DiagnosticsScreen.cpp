@@ -70,7 +70,7 @@ void DiagnosticsScreen::update() {
     auto add = [&](const char* fmt, auto... args) {
         if (w < int(sizeof(buf)) - 1) w += snprintf(buf + w, sizeof(buf) - size_t(w), fmt, args...);
     };
-    add("FW %s (%s)\n", SDA_FW_VERSION_STR, ota_guard::runningPartition());
+    add("FW %s %s (%s)\n", SDA_FW_VERSION_STR, SDA_FW_COMMIT, ota_guard::runningPartition());
     add("%s\n", SDA_HW_NAME);
     add("Laufzeit %lu s\n", static_cast<unsigned long>(p.uptimeS));
     add("RAM frei %lu kB (min %lu)\n", static_cast<unsigned long>(p.freeHeap / 1024),
