@@ -71,11 +71,22 @@ progress{width:100%}pre{white-space:pre-wrap;font-size:12px;max-height:340px;ove
     <div class="card"><h3>Kalibrierdaten</h3><pre id="cald"></pre><button class="warn" onclick="if(confirm('Kalibrierung löschen?'))api('DELETE','/api/calibration').then(loadCal)">Löschen</button></div>
   </div>
 </section>
+<section data-tab="Einrichtung">
+  <div class="grid">
+    <div class="card"><h3>Mit WLAN verbinden</h3>
+      <p class="small">Das Gerät verbindet sich danach mit deinem Netz und ist dort unter <b>http://smartdrill.local/</b> bzw. der am Gerät angezeigten IP erreichbar (dann mit Login). Der Access Point wird geschlossen.</p>
+      <div class="row"><button onclick="scan()">Netzwerke suchen</button><span id="scanm" class="small"></span></div>
+      <label>Netzwerk</label><select id="wssid"><option value="">– erst suchen oder unten eintippen –</option></select>
+      <label>oder Name (SSID)</label><input id="wssid2" maxlength="32">
+      <label>Passwort</label><input id="wpass" type="password" maxlength="64">
+      <p><button class="pri" onclick="joinWifi()">Verbinden</button></p></div>
+    <div class="card"><h3>Firmware-Update (OTA)</h3><p class="small">firmware.bin aus <code>.pio/build/sda_s3_touch_128/</code>. Das neue Image bestätigt sich nach erfolgreichem Selbsttest; sonst automatische Rückkehr zur alten Firmware.</p>
+      <input type="file" id="fw" accept=".bin"><progress id="fwp" max="100" value="0"></progress><p><button class="pri" onclick="upload()">Hochladen</button> <span id="fwm"></span></p></div>
+  </div>
+</section>
 <section data-tab="System">
   <div class="grid">
     <div class="card"><h3>Status</h3><table id="sys"></table></div>
-    <div class="card"><h3>Firmware-Update</h3><p class="small">firmware.bin aus <code>.pio/build/sda_s3_touch_128/</code>. Das neue Image bestätigt sich nach erfolgreichem Selbsttest; sonst automatische Rückkehr zur alten Firmware.</p>
-      <input type="file" id="fw" accept=".bin"><progress id="fwp" max="100" value="0"></progress><p><button class="pri" onclick="upload()">Hochladen</button> <span id="fwm"></span></p></div>
     <div class="card"><h3>Konfiguration</h3><div class="row"><button onclick="exportCfg()">Export</button><input type="file" id="imp" accept=".json" style="width:auto"><button onclick="importCfg()">Import</button></div>
       <label><input type="checkbox" id="impcal" style="width:auto"> Kalibrierung mit importieren</label>
       <p><button class="warn" onclick="if(confirm('Neustart?'))api('POST','/api/reboot')">Neustart</button></p></div>
@@ -90,7 +101,7 @@ const TS=['ungültig','weit','nah','innen','im Ziel'],TSC=['--bad','--far','--ne
 const POSES=['+X','-X','+Y','-Y','+Z','-Z'];
 const AREF=['zur Horizontalen','zur Vertikalen','Nullpunkt + oben','Nullpunkt + unten','Nullpunkt + links (Gyro)','Nullpunkt + rechts (Gyro)'];
 function toast(m){const e=$('fwm');e.textContent=m;setTimeout(()=>{if(e.textContent==m)e.textContent=''},3000)}
-async function api(method,path,body){const o={method,headers:{'Authorization':'Basic '+AUTH}};
+async function api(method,path,body){const o={method,headers:AUTH?{'Authorization':'Basic '+AUTH}:{}};
  if(body!==undefined){o.headers['Content-Type']='application/json';o.body=JSON.stringify(body)}
  const r=await fetch(path,o);const t=await r.text();let j;try{j=JSON.parse(t)}catch(e){j=t}
  if(r.status==401){logout();throw new Error('auth')}if(!r.ok){alert((j.error&&j.error.message)||('Fehler '+r.status));throw new Error(r.status)}return j}
@@ -138,7 +149,7 @@ const LABELS={filterStrength:['Filterstärke',[0,1,2,3,4]],fusion:['Sensorfusion
  offAfterSec:['Display aus nach [s] (0=nie)'],rotation:['Displayrotation',['0°','90°','180°','270°']],theme:['Design',['Dunkel','Hoher Kontrast']],colorMode:['Farbmodus',['Standard','Farbenblind']],
  largeFont:['Schriftgröße',['Normal','Groß']],decimals:['Nachkommastellen',{'1':'1','2':'2'}],touchLockAuto:['Touchsperre bei Vibration'],showHistory:['Verlauf anzeigen'],
  historyWindowSec:['Verlaufsfenster',{'5':'5 s','15':'15 s','30':'30 s'}],wifiMode:['WLAN-Modus',['Aus','Access Point','Client']],ssid:['WLAN SSID'],password:['WLAN Passwort (leer = unverändert)'],
- hostname:['Hostname (mDNS)'],mdns:['mDNS'],sleepAfterMin:['Ruhezustand nach [min] (0=nie)'],bootButton:['BOOT kurz drücken',['Hold','Nullpunkt','Nächster Modus','Touchsperre']],powerOnHold:['Einschalten: BOOT 1 s halten'],chargeScreen:['Ladeanzeige',['Aus','Nur wenn eingeschaltet','Auch im Aus-Zustand (prüft alle 30 s)']],axisMap:['Achszuordnung Sensor→Gerät'],
+ hostname:['Hostname (mDNS)'],apSecured:['Access Point mit Passwort'],apLogin:['Login auch im Access Point'],mdns:['mDNS'],sleepAfterMin:['Ruhezustand nach [min] (0=nie)'],bootButton:['BOOT kurz drücken',['Hold','Nullpunkt','Nächster Modus','Touchsperre']],powerOnHold:['Einschalten: BOOT 1 s halten'],chargeScreen:['Ladeanzeige',['Aus','Nur wenn eingeschaltet','Auch im Aus-Zustand (prüft alle 30 s)']],axisMap:['Achszuordnung Sensor→Gerät'],
  logLevel:['Log-Level',['Fehler','Warnung','Info','Debug']],batteryDividerFactor:['Akku-Spannungsteiler'],lowBatteryV:['Akku-Warnung [V]'],criticalBatteryV:['Akku kritisch [V]'],liveRateHz:['Live-Datenrate [Hz]']};
 const SKIP=['version','activeProfile','passwordSet'];
 async function loadCfg(){cfg=await api('GET','/api/config');let h='';for(const g of ['measurement','display','system']){h+=`<h3>${{measurement:'Messung',display:'Anzeige',system:'System'}[g]}</h3>`;
@@ -182,7 +193,21 @@ function upload(){const file=$('fw').files[0];if(!file)return;const fd=new FormD
  x.open('POST','/api/update');x.setRequestHeader('Authorization','Basic '+AUTH);x.send(fd)}
 async function exportCfg(){const j=await api('GET','/api/export');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(j,null,1)],{type:'application/json'}));a.download='smartdrill-config.json';a.click()}
 async function importCfg(){const file=$('imp').files[0];if(!file)return;const j=JSON.parse(await file.text());j.importCalibration=$('impcal').checked;const r=await api('POST','/api/import',j);toast('Import: '+JSON.stringify(r))}
-tabs();if(AUTH)api('GET','/api/status').then(start).catch(logout);
+// captive portal / devices on the access point: no login needed -> start directly
+let PORTAL=false;
+async function boot(){tabs();
+ try{const r=await fetch('/api/status',AUTH?{headers:{'Authorization':'Basic '+AUTH}}:{});
+  if(r.ok){const s=await r.json();PORTAL=!!s.portal;await start();if(PORTAL)openTab('Einrichtung');return}}catch(e){}
+ logout()}
+function openTab(n){[...$('tabs').children].forEach(b=>{if(b.textContent==n)b.click()})}
+async function scan(){$('scanm').textContent='suche …';for(let i=0;i<20;i++){const r=await api('GET','/api/wifi/scan');
+ if(r.networks){const seen=new Set();$('wssid').innerHTML='<option value="">– Netzwerk wählen –</option>'+r.networks.sort((a,b)=>b.rssi-a.rssi)
+  .filter(n=>n.ssid&&!seen.has(n.ssid)&&seen.add(n.ssid)).map(n=>`<option>${n.ssid.replace(/</g,'&lt;')}</option>`).join('');
+  $('scanm').textContent=r.networks.length+' gefunden';return}await new Promise(x=>setTimeout(x,700))}$('scanm').textContent='keine Antwort'}
+async function joinWifi(){const ssid=$('wssid2').value||$('wssid').value;if(!ssid){alert('Netzwerk wählen');return}
+ await api('PUT','/api/config',{system:{wifiMode:2,ssid,password:$('wpass').value}});
+ alert('Gespeichert. Das Gerät verbindet sich jetzt mit „'+ssid+'“. Danach: http://smartdrill.local/ oder IP am Gerät (System › WLAN).')}
+boot();
 </script>
 </body>
 </html>

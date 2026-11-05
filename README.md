@@ -75,9 +75,11 @@ Ohne PlatformIO lassen sich die Tests mit `scripts/run_host_tests.sh` ausführen
 Falls der Upload nicht startet: **BOOT** gedrückt halten, **RESET** kurz drücken,
 **BOOT** loslassen (ROM-Bootloader), dann erneut hochladen.
 
-Ein OTA-Update geht so: WLAN am Gerät aktivieren (Einstellungen › System › WLAN),
-`http://<ip>/` öffnen, mit `admin` und dem Web-Passwort vom Gerät anmelden, unter
-**System** die Datei `.pio/build/sda_s3_touch_128/firmware.bin` hochladen.
+**WLAN einrichten und OTA-Update über das Portal:** Am Gerät *System › WLAN › Modus: Access Point* wählen.
+Dann mit dem Handy oder Laptop mit dem offenen WLAN `SmartDrill-XXXX` verbinden; die Portalseite öffnet sich automatisch (sonst `http://192.168.4.1/` aufrufen).
+Unter **Einrichtung** findest du die Netzwerksuche und die Verbindung mit deinem WLAN sowie das Firmware-Update: `firmware.bin` von der Flash-Seite herunterladen und hochladen.
+Ein Login ist im Portal nicht nötig; im Heimnetz meldest du dich mit `admin` und dem Web-Passwort vom Gerät an.
+Manche Portal-Minibrowser (v. a. iOS) erlauben keinen Datei-Upload; dann die Seite im normalen Browser unter `http://192.168.4.1/` öffnen.
 
 Die Bibliotheken sind auf exakte Versionen festgelegt, siehe [docs/Dependencies.md](docs/Dependencies.md).
 

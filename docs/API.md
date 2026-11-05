@@ -7,6 +7,17 @@ AP-Modus heißt das Netz `SmartDrill-XXXX` (Passwort am Gerät), und das Gerät 
 
 ## Sicherheit
 
+**Access Point / Captive Portal (Standard):** Der Access Point `SmartDrill-XXXX` ist **offen**.
+Nach dem Verbinden öffnen Smartphones und Laptops automatisch die Portalseite: Alle DNS-Anfragen werden auf das Gerät umgeleitet, die Prüf-URLs von Android, Apple, Windows und Firefox per 302.
+Geräte, die direkt mit diesem Access Point verbunden sind, brauchen **keinen Login**; das gilt auch für OTA-Updates.
+Dahinter stehen zwei Überlegungen:
+* Den AP schaltet man nur am Gerät selbst ein (System › WLAN). Wer das kann, hat das Gerät ohnehin in der Hand.
+* Die Ausnahme gilt nur für Clients im AP-Subnetz. Im Heimnetz (Client-Modus) bleibt der Login immer Pflicht.
+
+Abschaltbar am Gerät unter System › WLAN: „AP mit Passwort“ (WPA2 mit dem angezeigten AP-Passwort) und „Login im AP“.
+Hinweis: Solange der offene AP läuft, kann jeder in Funkreichweite die Einstellungen ändern und Firmware einspielen. AP nach dem Einrichten wieder ausschalten.
+
+
 * **Alle `/api/*`-Endpunkte** verlangen HTTP-Basic-Auth mit Benutzer `admin` und dem
   Web-Passwort. Das Passwort wird beim ersten Start zufällig erzeugt und am Gerät unter
   System › WLAN › Web-Passwort angezeigt. Ändern lässt es sich über
@@ -65,6 +76,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | POST | `/api/mode` | `{"mode":0..5}`: 0 Bohren, 1 Waage, 2 Winkel, 3 Nullpunkt, 4 Referenz, 5 Präzision |
 | POST | `/api/hold` | Hold umschalten |
 | POST | `/api/target` | `{"angle":0..90,"reference":0..5,"tolerance":0.05..10}` für das aktive Profil. `reference`: 0 zur Horizontalen, 1 zur Vertikalen, 2 Nullpunkt + oben, 3 Nullpunkt + unten, 4 Nullpunkt + links (Gyro), 5 Nullpunkt + rechts (Gyro). Das Feld `angleReference` im Profil hat dieselbe Bedeutung |
+| GET | `/api/wifi/scan` | WLAN-Suche (asynchron): `202 {"scanning":true}`, später `{"networks":[{"ssid","rssi","open"}]}` |
 | GET | `/api/token` | `{"token":"...","port":81}` |
 | GET | `/api/log` | letzte ca. 2 KB Log (text/plain) |
 | GET | `/api/export` | Einstellungen, Profile und Kalibrierung als JSON (ohne Passwörter) |
@@ -84,7 +96,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
               "colorMode": 0, "largeFont": 0, "decimals": 1, "touchLockAuto": false,
               "showHistory": true, "historyWindowSec": 15},
   "system": {"wifiMode": 0, "ssid": "", "hostname": "smartdrill", "mdns": true, "sleepAfterMin": 30,
-             "bootButton": 0, "powerOnHold": true, "axisMap": "+X+Y+Z", "logLevel": 2, "batteryDividerFactor": 3.0,
+             "bootButton": 0, "powerOnHold": true, "apSecured": false, "apLogin": false, "axisMap": "+X+Y+Z", "logLevel": 2, "batteryDividerFactor": 3.0,
              "lowBatteryV": 3.5, "criticalBatteryV": 3.35, "activeProfile": 0, "liveRateHz": 10,
              "passwordSet": false}
 }

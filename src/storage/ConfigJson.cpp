@@ -102,6 +102,8 @@ void settingsToJson(const AppSettings& s, JsonObject o, bool secrets) {
     y["ssid"] = s.system.ssid;
     y["hostname"] = s.system.hostname;
     y["mdns"] = s.system.mdns;
+    y["apSecured"] = s.system.apSecured;
+    y["apLogin"] = s.system.apLogin;
     y["sleepAfterMin"] = s.system.sleepAfterMin;
     y["bootButton"] = static_cast<int>(s.system.bootButton);
     y["powerOnHold"] = s.system.powerOnHold;
@@ -169,6 +171,8 @@ bool settingsFromJson(JsonObjectConst o, AppSettings& out) {
         if (!y["adminPassword"].isNull() && std::strlen(s.system.adminPassword) < 8) ok = false;
         ok &= getStr(y, "hostname", s.system.hostname, sizeof(s.system.hostname));
         ok &= getBool(y, "mdns", s.system.mdns);
+        ok &= getBool(y, "apSecured", s.system.apSecured);
+        ok &= getBool(y, "apLogin", s.system.apLogin);
         ok &= getNum(y, "sleepAfterMin", s.system.sleepAfterMin);
         ok &= getEnum(y, "bootButton", s.system.bootButton);
         ok &= getBool(y, "powerOnHold", s.system.powerOnHold);

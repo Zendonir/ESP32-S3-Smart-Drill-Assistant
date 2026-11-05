@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <Update.h>
 #include <WebServer.h>
+#include <WiFi.h>
 #include <WebSocketsServer.h>
 #include <esp_ota_ops.h>
 #include <esp_random.h>
@@ -87,8 +88,31 @@ void WebApi::fillStatus(NetStatus& n) const {
 }
 
 // ---------------------------------------------------------------------------
+bool WebApi::fromAccessPoint() {
+    if (!(WiFi.getMode() & WIFI_AP)) return false;
+    const IPAddress ap = WiFi.softAPIP();
+    const IPAddress c = http_->client().remoteIP();
+    // same /24 subnet as the soft-AP (192.168.4.x by default)
+    return c[0] == ap[0] && c[1] == ap[1] && c[2] == ap[2];
+}
+
+bool WebApi::authorized() {
+    const AppSettings s = app_.settings.get();
+    if (fromAccessPoint() && !s.system.apLogin) return true;
+    return std::strlen(s.system.adminPassword) >= 8 && http_->authenticate("admin", s.system.adminPassword);
+}
+
+void WebApi::captiveRedirect() {
+    // answer the OS connectivity checks with a redirect -> "sign in to network" page
+    const String url = String("http://") + WiFi.softAPIP().toString() + "/";
+    http_->sendHeader("Location", url, true);
+    http_->sendHeader("Cache-Control", "no-store");
+    http_->send(302, "text/plain", "");
+}
+
 bool WebApi::auth() {
     requests_++;
+    if (fromAccessPoint() && !app_.settings.get().system.apLogin) return true;  // captive portal
     if (lockoutUntilMs_ && millis() < lockoutUntilMs_) {
         sendError(429, "locked", "Zu viele Fehlversuche, bitte 30 s warten");
         return false;
@@ -154,7 +178,21 @@ void WebApi::routes() {
     ROUTE("/api/export", HTTP_GET, hExport);
     ROUTE("/api/import", HTTP_POST, hImport);
     http_->on("/api/update", HTTP_POST, [this] { hUpdateDone(); }, [this] { hUpdateUpload(); });
-    http_->onNotFound([this] { sendError(404, "not_found", "Unbekannter Endpunkt"); });
+    ROUTE("/api/wifi/scan", HTTP_GET, hWifiScan);
+    // captive portal detection of Android, Apple, Windows and Firefox
+    for (const char* u : {"/generate_204", "/gen_204", "/hotspot-detect.html", "/library/test/success.html",
+                          "/connecttest.txt", "/ncsi.txt", "/redirect", "/canonical.html", "/success.txt", "/fwlink"})
+        http_->on(u, HTTP_ANY, [this] { captiveRedirect(); });
+    http_->onNotFound([this] {
+        // unknown host names from AP clients (captive portal) -> portal page
+        const String host = http_->hostHeader();
+        const bool api = http_->uri().startsWith("/api/");
+        if (!api && fromAccessPoint() && host != WiFi.softAPIP().toString()) {
+            captiveRedirect();
+            return;
+        }
+        sendError(404, "not_found", "Unbekannter Endpunkt");
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -177,6 +215,7 @@ void WebApi::hStatus() {
     app_.net.read(n);
     JsonDocument d;
     d["firmware"] = SDA_FW_VERSION_STR;
+    d["portal"] = fromAccessPoint();  // connected via the device's own access point
     d["commit"] = SDA_FW_COMMIT;
     d["build"] = SDA_FW_BUILD_DATE;
     d["board"] = SDA_HW_NAME;
@@ -557,6 +596,29 @@ void WebApi::hReboot() {
     ESP.restart();
 }
 
+void WebApi::hWifiScan() {
+    // asynchronous scan: first call starts it, later calls return the result
+    const int n = WiFi.scanComplete();
+    if (n == WIFI_SCAN_FAILED) {
+        if (!(WiFi.getMode() & WIFI_STA)) WiFi.mode(WIFI_AP_STA);  // scanning needs the station interface
+        WiFi.scanNetworks(true);
+        return sendJson(202, "{\"scanning\":true}");
+    }
+    if (n == WIFI_SCAN_RUNNING) return sendJson(202, "{\"scanning\":true}");
+    JsonDocument d;
+    JsonArray a = d["networks"].to<JsonArray>();
+    for (int i = 0; i < n && i < 30; ++i) {
+        JsonObject o = a.add<JsonObject>();
+        o["ssid"] = WiFi.SSID(i);
+        o["rssi"] = WiFi.RSSI(i);
+        o["open"] = WiFi.encryptionType(i) == WIFI_AUTH_OPEN;
+    }
+    WiFi.scanDelete();
+    String out;
+    serializeJson(d, out);
+    sendJson(200, out.c_str());
+}
+
 void WebApi::hToken() {
     char b[64];
     snprintf(b, sizeof(b), "{\"token\":\"%s\",\"port\":%u}", token_, appcfg::kWebSocketPort);
@@ -572,6 +634,7 @@ void WebApi::hLog() {
 void WebApi::hExport() {
     JsonDocument d;
     d["firmware"] = SDA_FW_VERSION_STR;
+    d["portal"] = fromAccessPoint();  // connected via the device's own access point
     cfgjson::settingsToJson(app_.settings.get(), d["settings"].to<JsonObject>(), false);
     cfgjson::profilesToJson(app_.profiles.all(), d["profiles"].to<JsonObject>());
     SensorCalibration c;
@@ -624,8 +687,7 @@ void WebApi::hUpdateUpload() {
         otaError_[0] = '\0';
         otaProgress_ = 0;
         otaRunning_ = false;
-        const AppSettings s = app_.settings.get();
-        if (!http_->authenticate("admin", s.system.adminPassword)) {
+        if (!authorized()) {
             sda::copyString(otaError_, sizeof(otaError_), "unauthorized");
             return;
         }

@@ -4,7 +4,9 @@
 //
 // Security: every /api/* endpoint requires HTTP Basic authentication
 // (user "admin", device generated password shown on the device under
-// System > WLAN). The WebSocket requires a session token obtained from the
+// System > WLAN) - except for devices connected directly to the device's own
+// access point (captive portal), unless "Login im AP" is enabled. The access
+// point has to be switched on at the device itself. The WebSocket requires a session token obtained from the
 // authenticated endpoint GET /api/token. Repeated authentication failures
 // trigger a temporary lock-out.
 #pragma once
@@ -41,6 +43,12 @@ private:
     char otaError_[64] = "";
 
     bool auth();
+    /// Request comes from a device connected to our own access point.
+    bool fromAccessPoint();
+    /// Authorized without sending a response (used by the upload handler).
+    bool authorized();
+    void captiveRedirect();
+    void hWifiScan();
     void sendJson(int code, const char* body);
     void sendError(int code, const char* errCode, const char* msg);
     void routes();

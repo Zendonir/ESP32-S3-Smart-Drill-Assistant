@@ -2,6 +2,7 @@
 #include "NetworkManager.h"
 
 #include <Arduino.h>
+#include <DNSServer.h>
 #include <ESPmDNS.h>
 #include <WiFi.h>
 
@@ -33,6 +34,7 @@ void NetworkManager::stopAll() {
         MDNS.end();
         mdnsStarted_ = false;
     }
+    stopDns();
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true, false);
     WiFi.mode(WIFI_OFF);
@@ -44,8 +46,23 @@ void NetworkManager::startAp() {
     char ssid[33];
     apSsid(ssid, sizeof(ssid));
     WiFi.mode(apFallback_ ? WIFI_AP_STA : WIFI_AP);
-    const bool ok = WiFi.softAP(ssid, apPass_);
-    LOGI(TAG, "access point %s %s, IP %s", ssid, ok ? "started" : "FAILED", WiFi.softAPIP().toString().c_str());
+    // open access point (default) or WPA2 with the device generated password
+    const bool ok = WiFi.softAP(ssid, apSecured_ ? apPass_ : nullptr);
+    LOGI(TAG, "access point %s (%s) %s, IP %s", ssid, apSecured_ ? "WPA2" : "offen", ok ? "started" : "FAILED",
+         WiFi.softAPIP().toString().c_str());
+    startDns();
+}
+
+void NetworkManager::startDns() {
+    // Captive portal: every DNS name resolves to the device, so phones and laptops
+    // open the configuration page automatically after joining the access point.
+    if (!dns_) dns_ = new DNSServer();
+    dns_->setErrorReplyCode(DNSReplyCode::NoError);
+    dns_->start(53, "*", WiFi.softAPIP());
+}
+
+void NetworkManager::stopDns() {
+    if (dns_) dns_->stop();
 }
 
 void NetworkManager::startClient() {
@@ -62,13 +79,14 @@ void NetworkManager::applySettings(bool force) {
     settingsVersion_ = app_.settings.version();
     const sda::AppSettings s = app_.settings.get();
     const bool changed = force || mode_ != uint8_t(s.system.wifiMode) || std::strcmp(ssid_, s.system.ssid) != 0 ||
-                         std::strcmp(pass_, s.system.password) != 0 || std::strcmp(apPass_, s.system.apPassword) != 0 ||
+                         std::strcmp(pass_, s.system.password) != 0 || std::strcmp(apPass_, s.system.apPassword) != 0 || apSecured_ != s.system.apSecured ||
                          std::strcmp(host_, s.system.hostname) != 0 || mdns_ != s.system.mdns;
     if (!changed) return;
     mode_ = uint8_t(s.system.wifiMode);
     sda::copyString(ssid_, sizeof(ssid_), s.system.ssid);
     sda::copyString(pass_, sizeof(pass_), s.system.password);
     sda::copyString(apPass_, sizeof(apPass_), s.system.apPassword);
+    apSecured_ = s.system.apSecured;
     sda::copyString(host_, sizeof(host_), s.system.hostname);
     mdns_ = s.system.mdns;
     load_events::mark();  // WiFi changes the current draw considerably
@@ -141,6 +159,7 @@ void NetworkManager::task() {
                     WiFi.reconnect();
                 } else if (conn && apFallback_) {
                     LOGI(TAG, "connected, closing fallback AP");
+                    stopDns();
                     WiFi.softAPdisconnect(true);
                     WiFi.mode(WIFI_STA);
                     apFallback_ = false;
@@ -150,6 +169,7 @@ void NetworkManager::task() {
             updateStatus();
         }
         if (serverStarted_ && WiFi.getMode() != WIFI_OFF) {
+            if (dns_ && (WiFi.getMode() & WIFI_AP)) dns_->processNextRequest();
             api_->loop();
             vTaskDelay(pdMS_TO_TICKS(2));
         } else {

@@ -28,6 +28,8 @@ private:
     bool mdnsStarted_ = false;
     bool serverStarted_ = false;
     bool apFallback_ = false;
+    bool apSecured_ = false;
+    class DNSServer* dns_ = nullptr;   ///< captive portal: answers every DNS query with the AP address
     uint32_t clientStartMs_ = 0;
     uint32_t lastReconnectMs_ = 0;
 
@@ -40,4 +42,6 @@ private:
     void ensureServices();
     void updateStatus();
     void apSsid(char* out, size_t n) const;
+    void startDns();
+    void stopDns();
 };

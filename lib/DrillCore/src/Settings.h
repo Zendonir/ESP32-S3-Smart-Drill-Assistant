@@ -72,7 +72,9 @@ struct SystemSettings {
     WifiMode wifiMode = WifiMode::Off;
     char ssid[33] = "";
     char password[65] = "";
-    char apPassword[17] = "";     ///< generated on first boot if empty
+    char apPassword[17] = "";     ///< generated on first boot if empty (used only if apSecured)
+    bool apSecured = false;       ///< false: open access point with captive portal
+    bool apLogin = false;         ///< false: devices connected to the AP need no web login
     char adminPassword[17] = "";  ///< generated on first boot if empty (web API auth)
     char hostname[25] = "smartdrill";
     bool mdns = true;

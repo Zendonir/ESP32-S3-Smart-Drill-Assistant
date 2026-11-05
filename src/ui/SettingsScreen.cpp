@@ -279,7 +279,14 @@ void UIManager::menuWifi() {
             }),
             MenuItem::info("IP", [net] { return std::string(net().ip[0] ? net().ip : "-"); }),
             MenuItem::info("SSID", [net] { return std::string(net().ssid[0] ? net().ssid : "-"); }),
-            MenuItem::info("AP-Passwort", [&sm] { return std::string(sm.get().system.apPassword); }),
+            MenuItem::toggle("AP mit Passwort", [&sm] { return sm.get().system.apSecured; },
+                             [&sm](bool b) { sm.update([b](AppSettings& s) { s.system.apSecured = b; }); }),
+            MenuItem::info("AP-Passwort", [&sm] {
+                const AppSettings s = sm.get();
+                return s.system.apSecured ? std::string(s.system.apPassword) : std::string("keins (offen)");
+            }),
+            MenuItem::toggle("Login im AP", [&sm] { return sm.get().system.apLogin; },
+                             [&sm](bool b) { sm.update([b](AppSettings& s) { s.system.apLogin = b; }); }),
             MenuItem::info("Web-Login", [] { return std::string("admin"); }),
             MenuItem::info("Web-Passwort", [&sm] { return std::string(sm.get().system.adminPassword); }),
             MenuItem::info("Hostname", [&sm] { return std::string(sm.get().system.hostname) + ".local"; }),
