@@ -22,6 +22,9 @@ uint32_t g_lastGestureMs = 0;
 uint32_t g_pressStartMs = 0;
 bool g_unlockFired = false;
 bool g_holdFired = false;
+bool g_refFired = false;
+bool g_hadRef = false;
+bool g_holdAtPress = false;
 constexpr uint32_t kSurfaceHoldPressMs = 2000;
 
 const float kTolerances[] = {0.05f, 0.1f, 0.2f, 0.5f, 1.0f, 2.0f, 5.0f};
@@ -582,15 +585,28 @@ void UIManager::mainEvent(lv_event_t* e) {
             g_pressStartMs = millis();
             g_unlockFired = false;
             g_holdFired = false;
+            g_refFired = false;
+            g_hadRef = self->main_.tempReference();
+            g_holdAtPress = self->hold_;
             self->main_.notePress();
             break;
+        case LV_EVENT_RELEASED: {
+            // surface angle: released between 0.8 and 2 s with a reference -> reset it
+            const uint32_t held = millis() - g_pressStartMs;
+            if (self->main_.mode() == AppMode::SurfaceAngle && g_hadRef && !g_holdAtPress && !g_holdFired &&
+                !g_refFired && !self->touchLocked_ && !autoLock && held >= appcfg::kLongPressMs &&
+                held < kSurfaceHoldPressMs)
+                self->main_.toggleTempReference();
+            break;
+        }
         case LV_EVENT_LONG_PRESSED_REPEAT:
             if (self->touchLocked_ && !g_unlockFired && millis() - g_pressStartMs > 2500) {
                 g_unlockFired = true;
                 self->setTouchLock(false);
             }
             // surface angle gauge: hold 2 s = hold on/off
-            if (!self->touchLocked_ && !autoLock && !g_holdFired && self->main_.mode() == AppMode::SurfaceAngle &&
+            if (!self->touchLocked_ && !autoLock && !g_holdFired && !g_refFired &&
+                (g_hadRef || g_holdAtPress) && self->main_.mode() == AppMode::SurfaceAngle &&
                 millis() - g_pressStartMs > kSurfaceHoldPressMs) {
                 g_holdFired = true;
                 self->toggleHold();
@@ -601,7 +617,15 @@ void UIManager::mainEvent(lv_event_t* e) {
                 if (self->touchLocked_) self->main_.showToast("Gesperrt: weiter halten", 900);
                 break;
             }
-            if (self->main_.mode() == AppMode::SurfaceAngle) break;  // 2 s press handled above
+            if (self->main_.mode() == AppMode::SurfaceAngle) {
+                // 0.8 s: set the reference (red ring); with a reference the press
+                // continues to 2 s = hold, a shorter one resets it (on release)
+                if (!g_hadRef && !g_holdAtPress) {
+                    self->main_.toggleTempReference();
+                    g_refFired = true;
+                }
+                break;
+            }
             self->onLongPress();
             break;
         case LV_EVENT_SHORT_CLICKED:
@@ -642,15 +666,7 @@ void UIManager::onTap() {
     lv_timer_set_repeat_count(tapTimer_, 1);
 }
 
-void UIManager::onDoubleTap() {
-    // the surface angle gauge always needs the reference on double tap
-    if (hold_ || (settings_.system.doubleTap == 1 && main_.mode() != AppMode::SurfaceAngle)) {
-        toggleHold();
-        return;
-    }
-    const bool on = main_.toggleTempReference();
-    LOGI(TAG, "temporary reference %s", on ? "on" : "off");
-}
+void UIManager::onDoubleTap() { toggleHold(); }
 
 void UIManager::onLongPress() {
     if (hold_) {

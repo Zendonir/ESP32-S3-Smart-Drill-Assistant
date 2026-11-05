@@ -6,8 +6,8 @@
 // Touch concept (requirement 6.4):
 //   tap            -> quick menu
 //   swipe left/right -> previous / next operating mode
-//   long press     -> zero point / capture (mode dependent)
-//   double tap     -> temporary reference on/off (red ring) or hold (setting)
+//   long press     -> zero point on/off (red ring) / capture (mode dependent)
+//   double tap     -> hold on/off
 //   BOOT short     -> configurable (hold, zero, next mode, touch lock)
 //   BOOT long      -> touch lock on/off
 // Swipes are ignored while vibration is detected or the touch lock is active

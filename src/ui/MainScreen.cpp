@@ -675,6 +675,7 @@ void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, floa
     status_.targetAngleDeg = profile_.targetAngleDeg;
     status_.toleranceDeg = profile_.toleranceDeg;
     status_.profile = profileIdx_;
+    updateRefRing(s);
     if (hold_) return;  // frozen values stay on screen, clearly marked
 
     // defaults for every frame, modes override
@@ -703,52 +704,32 @@ void MainScreen::update(const OrientationSnapshot& s, const PowerStatus& p, floa
 }
 
 void MainScreen::primaryAction() {
+    // long press: set / reset the zero point of the current mode. An active
+    // zero point is always shown by the red ring at the display edge.
     if (!app_) return;
     switch (mode_) {
         case AppMode::Drill:
             if (angleReferenceNeedsZero(profile_.angleRef)) {
                 // angle relative to a zero point: capture the reference axis (3D zero
-                // contains the drift-free tilt part as well) and stay in drill mode
+                // contains the drift-free tilt part as well)
                 app_->meas.captureFull3D();
-                showToast("Bezugsachse gesetzt");
                 break;
             }
-            // fall through: absolute angle -> classic zero point mode
-            [[fallthrough]];
-        case AppMode::Zero:
-            if (settings_.measurement.zeroKind == ZeroKind::Full3D) app_->meas.captureFull3D();
-            else app_->meas.captureTiltZero();
-            if (mode_ == AppMode::Drill) {
-                UiCommand c{};
-                c.type = UiCommand::Type::SetMode;
-                c.i = static_cast<int32_t>(AppMode::Zero);
-                app_->postUi(c);
-            }
-            showToast("Nullpunkt gesetzt");
+            toggleTempReference();
             break;
-        case AppMode::Level: {
+        case AppMode::Zero: {
             OrientationSnapshot s;
             app_->meas.snapshot(s);
-            if (s.reference.kind() == ReferenceKind::TiltZero) {
-                app_->meas.clearReference();
-                showToast("Nullpunkt gelöscht");
-            } else {
-                app_->meas.captureTiltZero();
-                showToast("Relativ-Nullpunkt");
-            }
+            const ReferenceKind k = s.reference.kind();
+            if (k == ReferenceKind::TiltZero || k == ReferenceKind::Full3D) app_->meas.clearReference();
+            else if (settings_.measurement.zeroKind == ZeroKind::Full3D) app_->meas.captureFull3D();
+            else app_->meas.captureTiltZero();
             break;
         }
+        case AppMode::Level:
         case AppMode::Angle:
-            if (std::isfinite(angleRefDeg_)) {
-                angleRefDeg_ = NAN;
-                showToast("Absolute Messung");
-            } else {
-                OrientationSnapshot s;
-                app_->meas.snapshot(s);
-                angleRefDeg_ = drillGeometry(s.qWD, profile_.mount).elevationDeg;
-                showToast("Referenzwinkel gesetzt");
-            }
-            fv_.reset();
+        case AppMode::SurfaceAngle:
+            toggleTempReference();
             break;
         case AppMode::Reference:
             app_->meas.captureSurface(settings_.measurement.reference3D);
@@ -765,7 +746,6 @@ bool MainScreen::toggleTempReference() {
     if (!app_) return false;
     if (tempActive_) {
         tempActive_ = false;
-        hide(tempRing_, true);
         tracker_.reset();
         fx_.reset();
         fy_.reset();
@@ -784,7 +764,6 @@ bool MainScreen::toggleTempReference() {
     tempElevDeg_ = g.elevationDeg;
     tempInclDeg_ = g.inclinationDeg;
     tempActive_ = true;
-    hide(tempRing_, false);
     tracker_.reset();
     fx_.reset();
     fy_.reset();
@@ -835,7 +814,7 @@ void MainScreen::updateSurfaceAngle(const OrientationSnapshot& s, float dt) {
     if (!tempActive_) {
         hide(lblHint_, false);
         lv_obj_align(lblHint_, LV_ALIGN_CENTER, 0, 40);
-        lv_label_set_text(lblHint_, "Auf Bezugsfläche legen,\ndoppelt tippen");
+        lv_label_set_text(lblHint_, "Auf Bezugsfläche legen,\ngedrückt halten");
         const float abs = valid ? fv_.update(supportFaceTiltDeg(s.upD), dt) : NAN;
         fmtAngle(b, sizeof(b), abs, false);
         lv_label_set_text(lblBig_, b);
@@ -856,4 +835,19 @@ void MainScreen::updateSurfaceAngle(const OrientationSnapshot& s, float dt) {
     lv_label_set_text(lblInfo_, "2 s halten: Hold");
     shownValue_ = a;
     status_.valueDeg = a;
+}
+
+void MainScreen::updateRefRing(const OrientationSnapshot& s) {
+    // red ring = the display shows values relative to a zero point / reference
+    const ReferenceKind k = s.reference.kind();
+    const bool zero = k == ReferenceKind::TiltZero || k == ReferenceKind::Full3D;
+    const bool surface = k == ReferenceKind::SurfaceRestricted || k == ReferenceKind::Surface3D;
+    bool on = tempActive_;
+    if (mode_ == AppMode::Zero && zero) on = true;
+    if (mode_ == AppMode::Reference && surface) on = true;
+    if (mode_ == AppMode::Drill && angleReferenceNeedsZero(profile_.angleRef) && zero) on = true;
+    if (on != refRingShown_) {
+        refRingShown_ = on;
+        hide(tempRing_, !on);
+    }
 }

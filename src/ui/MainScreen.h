@@ -37,7 +37,7 @@ public:
     /// Per frame update with the newest snapshot (ignored while hold is active).
     void update(const sda::OrientationSnapshot& s, const PowerStatus& p, float dt);
     void setHold(bool on);
-    /// Temporary reference (double tap): the current position becomes the zero of
+    /// Temporary reference (long press): the current position becomes the zero of
     /// every mode, marked by a red outer ring. Calling it again restores the
     /// original reference. Gravity based (drift free); the stored references of
     /// the measurement service are not touched. Returns the new state.
@@ -118,6 +118,8 @@ private:
     float tempInclDeg_ = NAN;          ///< drill axis inclination at the double tap
     void updateTempDrill(const sda::OrientationSnapshot& s, float dt);
     void updateSurfaceAngle(const sda::OrientationSnapshot& s, float dt);
+    void updateRefRing(const sda::OrientationSnapshot& s);
+    bool refRingShown_ = false;
     float shownValue_ = NAN;           ///< surface angle as displayed (last frame)
     float pressValue_ = NAN;           ///< shownValue_ when the touch press started
     uint32_t pressMs_ = 0;

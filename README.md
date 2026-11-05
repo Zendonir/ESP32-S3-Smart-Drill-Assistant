@@ -91,8 +91,8 @@ Die Bibliotheken sind auf exakte Versionen festgelegt, siehe [docs/Dependencies.
 |---|---|
 | Tippen | Schnellmenü: Sollwinkel, Toleranz, Skala, Hold, Nullpunkt/Speichern, Sperre, Profil, Menü |
 | Wischen links/rechts | Modus wechseln (bei Vibration oder Touchsperre ignoriert) |
-| Lange drücken | Nullpunkt setzen, Fläche erfassen oder Präzisionsmessung starten (je nach Modus). Bei aktivem Hold wird der Wert gespeichert |
-| Doppeltippen | **Temporärer Bezug**: die aktuelle Lage wird zum neuen Nullpunkt aller Modi, ein **roter Ring** am Displayrand zeigt das an. Nochmal doppelt tippen → zurück zum Original-Bezug. Alternativ Hold (*System › Doppeltippen*) |
+| Lange drücken | **Nullpunkt an/aus** (roter Ring am Displayrand = Anzeige relativ zum Nullpunkt; nochmal lange drücken = zurück zum Original). Im Modus Referenzfläche: Fläche erfassen, im Präzisionsmodus: Messung starten. Bei aktivem Hold wird der Wert gespeichert |
+| Doppeltippen | Hold an/aus (blauer Ring) |
 | BOOT kurz | konfigurierbar (Hold, Nullpunkt, nächster Modus, Touchsperre) |
 | BOOT doppelt | Touchsperre an/aus. Entsperren alternativ durch 2,5 s Halten auf dem Display |
 | BOOT 3 s halten | **Ausschalten**: Countdown-Ring, Loslassen bricht ab. Danach Anzeige „Aus“ mit Ladestand |
@@ -182,9 +182,9 @@ Eigener Code: MIT. Die Bibliotheken behalten ihre eigenen Lizenzen
 (LVGL MIT, LovyanGFX FreeBSD, ArduinoJson MIT, arduinoWebSockets LGPL-2.1, Arduino-ESP32 LGPL-2.1).
 Die Schriften sind aus Montserrat (OFL) und FontAwesome (OFL/MIT) mit `lv_font_conv` erzeugt.
 
-### Temporärer Bezug (Doppeltippen)
+### Nullpunkt per langem Drücken (roter Ring)
 
-Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten Nullpunkte und Referenzflächen bleiben unverändert; der Bezug gilt bis zum nächsten Doppeltippen oder Neustart.
+Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten Nullpunkte und Referenzflächen bleiben unverändert; der Bezug gilt bis zum nächsten langen Drücken oder Neustart. Im Modus *Nullpunkt* wird der gespeicherte Nullpunkt (Neigung oder 3D, siehe Einstellungen) gesetzt bzw. gelöscht, im Bohrmodus mit Winkel zum Nullpunkt die Bezugsachse.
 
 | Modus | Anzeige relativ zum temporären Bezug |
 |---|---|
@@ -196,9 +196,9 @@ Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten
 
 ### Flächenwinkel (Winkel zwischen zwei Flächen)
 
-1. Gerät auf die Bezugsfläche legen und **doppelt tippen**: Der rote Ring zeigt den Bezug.
+1. Gerät auf die Bezugsfläche legen und **gedrückt halten** (0,8 s): Der rote Ring zeigt den Bezug.
 2. Gerät mit derselben Seite auf die zu messende Fläche legen: Der Winkel zwischen beiden Flächen wird angezeigt (0–180°). Orange heißt: Gerät liegt noch nicht ruhig.
-3. **2 s auf das Display drücken**: Hold (blauer Ring). Der Wert bleibt stehen, auch wenn man das Gerät wegnimmt. Es wird der Wert von *vor* dem Drücken eingefroren, damit der Fingerdruck das Ergebnis nicht verfälscht.
-4. Nochmal 2 s drücken oder doppelt tippen beendet Hold. Doppelt tippen ohne Hold löscht den Bezug.
+3. **2 s auf das Display drücken** (oder doppelt tippen): Hold (blauer Ring). Der Wert bleibt stehen, auch wenn man das Gerät wegnimmt. Es wird der Wert von *vor* dem Drücken eingefroren, damit der Fingerdruck das Ergebnis nicht verfälscht.
+4. Nochmal 2 s drücken oder doppelt tippen beendet Hold. Kurz gedrückt halten (0,8–2 s) ohne Hold löscht den Bezug.
 
 Ohne Bezug zeigt der Modus den Winkel der Auflagefläche zur Waagerechten. Wie bei jedem schwerkraftbasierten Winkelmesser stimmt der Winkel nur, wenn die gemeinsame Kante der beiden Flächen waagerecht liegt (z. B. Tischplatte und schräges Brett, Boden und Wand). Ein Drehen um die Senkrechte ist ohne Kompass nicht messbar.

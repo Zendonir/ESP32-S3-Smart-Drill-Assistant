@@ -82,7 +82,7 @@ struct SystemSettings {
     uint8_t performance = 0;      ///< 0 economy (CPU 160 MHz), 1 maximum (240 MHz)
     uint8_t apIdleOffMin = 10;    ///< access point off after N min without clients, 0 = never
     ButtonAction bootButton = ButtonAction::Hold;
-    uint8_t doubleTap = 0;        ///< double tap on the display: 0 temporary reference, 1 hold
+    uint8_t doubleTap = 0;        ///< unused since 1.4.0 (double tap = hold), kept for compatibility
     bool powerOnHold = true;      ///< switching on requires holding BOOT for 1 s
     uint8_t chargeScreen = 2;     ///< 0 off, 1 while switched on, 2 also wake from "off" to show it
     AxisMap axisMap;              ///< sensor -> device axis mapping

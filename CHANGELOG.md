@@ -2,6 +2,7 @@
 
 | Version | Änderung |
 |---|---|
+| 1.4.0 | Gedrückt halten = Nullpunkt/Bezug mit rotem Ring (nochmal = Original), Doppeltippen = Hold. Flächenwinkel: 0,8 s = Bezug, mit Bezug 2 s = Hold |
 | 1.3.0 | Neuer Modus Flächenwinkel: Bezugsfläche per Doppeltippen, Winkel zur zweiten Fläche, 2 s halten = Hold |
 | 1.2.2 | Temporärer Bezug ohne Textmeldung, nur der rote Ring zeigt ihn an |
 | 1.2.1 | Start: Sensor bekommt mehrere Versuche, Meldung „Initialisierung …“ statt „Sensor nicht gefunden“ |
