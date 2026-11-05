@@ -84,9 +84,16 @@ void setup() {
     g_ui.bootStep(app.boot.touch ? "Touch CST816S" : "Touch fehlt", app.boot.touch);
 
     // IMU
-    app.boot.imu = app.boot.i2c && app.imu.begin();
+    // the QMI8658 sometimes needs a moment after power-up / deep sleep: retry
+    app.boot.imu = false;
+    for (int i = 0; i < 10 && app.boot.i2c && !app.boot.imu; ++i) {
+        app.boot.imu = app.imu.begin();
+        if (!app.boot.imu) delay(100);
+    }
     app.boot.imuAddress = app.imu.address();
-    g_ui.bootStep(app.boot.imu ? "Sensor QMI8658" : "QMI8658 FEHLER", app.boot.imu);
+    // not ready yet: the measurement task keeps re-initializing it, the UI only
+    // reports an error if it still does not answer a few seconds later
+    g_ui.bootStep(app.boot.imu ? "Sensor QMI8658" : "Sensor: Initialisierung ...", true);
 
     // storage: profiles (LittleFS) and calibration (NVS)
     uint8_t active = s.system.activeProfile;

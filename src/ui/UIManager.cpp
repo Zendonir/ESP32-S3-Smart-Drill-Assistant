@@ -70,7 +70,10 @@ void UIManager::start() {
     }
     if (app_->boot.chargeBoot) {
         // woke up for the charge screen: no start-up hints
-    } else if (!app_->boot.imu) main_.showToast("Sensor QMI8658 nicht gefunden!", 6000);
+    } else if (!app_->boot.imu) {
+        main_.showToast("Initialisierung ...", 3000);
+        imuCheckAtMs_ = millis() + 8000;
+    }
     else if (!app_->boot.calibrationLoaded)
         main_.showToast("Bitte kalibrieren:\nMenü > Kalibrierung", 4000);
 
@@ -121,6 +124,11 @@ void UIManager::task() {
         lastMs = now;
         app_->meas.snapshot(snap_);
         checkStartupGyro();
+        if (imuCheckAtMs_ && static_cast<int32_t>(now - imuCheckAtMs_) >= 0) {
+            imuCheckAtMs_ = 0;
+            if (app_->imu.isHealthy()) app_->boot.imu = true;  // came up late
+            else main_.showToast("Sensor QMI8658 antwortet nicht", 6000);
+        }
         PowerStatus ps;
         app_->power.read(ps);
 
