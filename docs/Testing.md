@@ -9,7 +9,7 @@ tools/render_check/menu_preview.cpp  # rendert ein Menü auf dem Host als Bild (
 scripts/check_fonts.sh            # LVGL mit der Firmware-lv_conf.h auf dem Host: Text in jeder Schrift muss Pixel erzeugen
 ```
 
-81 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
+83 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
 Datengrundlage ist ein deterministischer synthetischer IMU-Generator
 (`test/support/SyntheticImu.h`) mit Rauschen, Bias, Skalen- und Offsetfehlern,
 Vibration und Sample-Verlust.
@@ -17,7 +17,7 @@ Vibration und Sample-Verlust.
 | Suite | Inhalt |
 |---|---|
 | `test_math` | Quaternionen (Achse/Winkel, Matrix-Hin-und-Rück, Komposition, exp/log, zwei Vektoren), Matrixinverse, Achspermutation (Parsen, Spiegelung abgelehnt), Anzeigebasis, Jacobi-Eigenzerlegung, kleinste Quadrate |
-| `test_calibration` | Gyro-Bias und -Rauschen, Neustart bei Bewegung, Ablehnung zu hohen Rauschens, 6 Lagen Offset/Skala mit Schiefstand, erweiterte 3×3-Kreuzkopplung, falsche Lage, Temperaturinterpolation (kein Extrapolieren, „inaktiv“ bei einem Punkt), Plausibilität, Montage-Rollfit, zu geringe Abdeckung, Ständerverfahren, automatische Achsenerkennung für alle 24 Einbaulagen, Umrechnung der Kalibrierung bei geänderter Zuordnung |
+| `test_calibration` | Gyro-Bias und -Rauschen, Neustart bei Bewegung, Ablehnung zu hohen Rauschens, 6 Lagen Offset/Skala mit Schiefstand, erweiterte 3×3-Kreuzkopplung, falsche Lage, Temperaturinterpolation (kein Extrapolieren, „inaktiv“ bei einem Punkt), Plausibilität, Montage-Rollfit, zu geringe Abdeckung, Ständerverfahren, automatische Achsenerkennung für alle 24 Einbaulagen, Umrechnung der Kalibrierung bei geänderter Zuordnung, Umschlagkalibrierung Rückseite/Unterseite mit geneigtem Tisch und schief eingebautem Sensor (korrigierte Waage zeigt 0°), Kombination mehrerer Paare, Löschen bei neuer 6-Lagen-Kalibrierung |
 | `test_fusion` | Konvergenz aller drei Filter, reine Gyro-Integration, **Azimut bleibt von der Accel-Korrektur unberührt**, Driftrate ohne Korrektur, Wachsen und Schrumpfen der Unsicherheit, Filterwechsel |
 | `test_orientation` | Wasserwaage flach und Kante, relative Neigung, senkrechtes Ziel (2D, Richtung), waagerechtes Ziel (nur Elevation, Seite frei), 45° mit Hemisphärenwechsel, Winkelkorrektur, Richtungsziel seitlich, Fläche eingeschränkt vs. 3D, relativer Azimut, Winkelbezug (Vertikale = 90° − Horizontale, Nullpunkt oben/unten driftfrei mit beliebigem Azimut, über die Senkrechte ungültig, links/rechts nur mit 3D-Nullpunkt, Vorzeichen, senkrechte Bezugsachse ungültig) |
 | `test_detectors` | Stillstand nach Haltezeit, schnell/langsam, langsames Kriechen ist kein Stillstand, Vibrationsstufen mit Rückstufung, Accel-Vertrauen, Stillstand ohne Kalibrierung (Gyro-Offset, Skalenfehler), Zeitschätzer (±3 % ODR, Überlauf, Verlust, Duplikat, Lücke), Fallback auf Host-Zeit, Werkzeugzustand |
@@ -101,6 +101,6 @@ Messungen nicht**. Mit den Messungen lassen sich die Modellparameter überprüfe
 
 * Firmware-Build (`sda_s3_touch_128`): erfolgreich mit PlatformIO 6.1, espressif32 6.9.0
   und Arduino-ESP32 2.0.17.
-* Host-Tests: 81/81 bestanden.
+* Host-Tests: 83/83 bestanden.
 * **Hardwaretests 1–13: noch nicht durchgeführt.** Es lag keine Hardware vor. Ergebnisse
   bitte im Format der Tabelle oben unter `docs/results/` ablegen.

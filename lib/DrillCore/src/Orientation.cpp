@@ -18,6 +18,7 @@ LevelAngles levelAngles(const Vec3& upDIn) {
     while (rr > 45.0f) { rr -= 90.0f; idx = (idx + 1) & 3; }
     while (rr <= -45.0f) { rr += 90.0f; idx = (idx + 3) & 3; }
     r.edgeRollDeg = rr;
+    r.edgePitchDeg = rad2deg(safeAsin(u.z));
     r.edgeIndex = idx;
     return r;
 }

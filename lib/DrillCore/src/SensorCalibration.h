@@ -11,6 +11,7 @@
 
 #include <cstdint>
 
+#include "FaceCalibration.h"
 #include "MathTypes.h"
 
 namespace sda {
@@ -74,6 +75,12 @@ public:
     void clearAccel() { accelCount_ = 0; }
     void clearAll() { clearGyro(); clearAccel(); }
 
+    // --- reversal (Umschlag) calibration of the support faces ---------------
+    const FaceCalibration& face(SupportFace f) const { return faces_[int(f)]; }
+    void setFace(SupportFace f, const FaceCalibration& c) { faces_[int(f)] = c; }
+    void clearFaces() { faces_[0] = faces_[1] = FaceCalibration{}; }
+    bool hasFaceCalibration() const { return faces_[0].valid || faces_[1].valid; }
+
     /// Re-expresses the calibration in a rotated device frame (v_new = R v_old),
     /// e.g. after the sensor axis mapping was corrected. R must be a rotation.
     void remap(const Mat3& R);
@@ -90,6 +97,7 @@ private:
     int gyroCount_ = 0;
     AccelCalPoint accel_[kMaxAccelCalPoints];
     int accelCount_ = 0;
+    FaceCalibration faces_[kSupportFaceCount];
     void sortGyro();
     void sortAccel();
 };

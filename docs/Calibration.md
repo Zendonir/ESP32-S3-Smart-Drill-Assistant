@@ -121,6 +121,32 @@ Das Unsicherheitsmodell nimmt bis zur Kompensation eine Bias-Temperaturdrift von
 0,02 °/s/K an. Dieser Wert ist eine **Annahme**, kein verifizierter Datenblattwert, und
 im Menü bzw. in der API einstellbar.
 
+## 3a. Umschlagkalibrierung der Auflageflächen (Menü › Kalibrierung › Umschlag Rückseite / Unterseite)
+
+Die 6-Lagen-Kalibrierung korrigiert den Sensor. Wie der Sensorchip zur **Auflagefläche des Gehäuses** steht, kann sie nicht sehen; der Fehler liegt typisch bei 0,1–2°.
+Diesen Fehler bestimmt die Umschlagmessung, und zwar unabhängig davon, ob der Tisch waagerecht ist:
+
+| Messung | Anzeige |
+|---|---|
+| Position 1 | Tischneigung + Gerätefehler |
+| um 180° gedreht, gleiche Stelle | −Tischneigung + Gerätefehler |
+| Ergebnis | Gerätefehler = Mittelwert, Tischneigung = halbe Differenz |
+
+Ablauf (pro Fläche):
+1. Rückseite: Display nach oben flach an einen Anschlag legen (Lineal, Leiste). Unterseite: auf die Auflagefläche stellen, Display zu dir. Dann **Start**; gemessen wird ca. 3 s in Ruhe.
+2. **Weiter**, dann das Gerät um 180° drehen und wieder an denselben Anschlag legen bzw. stellen. Die Messung startet automatisch, sobald das Gyroskop eine Drehung von 180° ± 25° erkennt und das Gerät ruht.
+3. Ergebnis: Gerätefehler (X/Y bzw. X/Z) und Tischneigung. **Nochmal** wiederholt die Messung zur Kontrolle (bis 4 Paare, Mittelwert). Bei einer Streuung über 0,1° warnt der Assistent; dann den Anschlag prüfen.
+
+Grenzen: Die Genauigkeit hängt davon ab, wie gut das Gerät an dieselbe Stelle zurückkommt und wie genau es um 180° gedreht wird; ein Anschlag ist deshalb wichtig.
+Die Tischneigung darf höchstens 5° betragen, der Gerätefehler höchstens 5°.
+
+Wirkung: In der Wasserwaage flach (Rückseite) und auf der Unterkante stehend (Unterseite) werden die Fehler abgezogen; die Anzeige lautet dann „WAAGE · Umschlag“ bzw. „U“.
+Das gilt auch für den Präzisionsmodus in diesen Lagen.
+Beim Bohren wirkt die Korrektur nicht, denn dort bestimmt die Montagekalibrierung die Achse.
+Eine neue 6-Lagen-Kalibrierung oder eine geänderte Achszuordnung löscht die Umschlagwerte. Sie wurden mit der alten Sensorkalibrierung gemessen und müssen dann neu bestimmt werden.
+
+Reihenfolge der Kalibrierungen: Achsen → Gyroskop → 6 Lagen → **Umschlag** → Montage.
+
 ## 4. Montagekalibrierung
 
 Die Leiterplatte sitzt in der Regel nicht exakt parallel zur Bohrachse. Gesucht ist der

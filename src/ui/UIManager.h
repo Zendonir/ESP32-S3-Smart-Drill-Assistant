@@ -133,4 +133,5 @@ private:
     void openCalibration(CalibrationScreen::Kind k);
     void openDiagnostics();
     std::string profileOptions();
+    std::string faceText(sda::SupportFace f);
 };

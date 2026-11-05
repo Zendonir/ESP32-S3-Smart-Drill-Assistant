@@ -144,7 +144,7 @@ Bei den absoluten Bezügen und bei „oben/unten“ ist die seitliche Richtung f
 In diesem Fall zeigt die Anzeige die geschätzte Drift (±°) und das Alter des Nullpunkts. Grün gibt es nur, solange die geschätzte Drift in die Toleranz passt; sonst neu nullen.
 Ist die Bezugsachse fast senkrecht (näher als 10° am Lot), ist „links/rechts“ nicht definiert, und das Gerät meldet das.
 
-Erstinbetriebnahme: Menü › Kalibrierung › **Achsen erkennen** (Display flach nach oben, dann aufrecht hinstellen), dann **Gyroskop**, dann **Sensor 6 Lagen**,
+Erstinbetriebnahme: Menü › Kalibrierung › **Achsen erkennen** (Display flach nach oben, dann aufrecht hinstellen), dann **Gyroskop**, dann **Sensor 6 Lagen**, dann **Umschlag Rückseite/Unterseite** (macht die Wasserwaage unabhängig vom Einbaufehler des Sensors),
 dann **Montage** (V-Nut oder Ständer). Details stehen in [docs/Calibration.md](docs/Calibration.md).
 
 ## Projektstruktur

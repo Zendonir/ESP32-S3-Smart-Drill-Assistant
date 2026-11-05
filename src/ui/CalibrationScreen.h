@@ -14,7 +14,7 @@
 
 class CalibrationScreen {
 public:
-    enum class Kind { Gyro, Accel, AccelExtended, MountRoll, MountVertical, AxisDetect };
+    enum class Kind { Gyro, Accel, AccelExtended, MountRoll, MountVertical, AxisDetect, FlipBack, FlipBottom };
     void open(AppContext& app, Kind kind, std::function<void()> onDone);
     void update(const sda::OrientationSnapshot& s);
     bool isOpen() const { return scr_ != nullptr; }
@@ -54,6 +54,17 @@ private:
     bool awaitConfirm_ = false;
     uint8_t lastPoseMask_ = 0;
     void askConfirm(const char* title, const char* nextStep, const char* button);
+    // reversal (Umschlag) calibration
+    int flipStep_ = 0;
+    int flipFrames_ = 0;
+    sda::Vec3 flipSum_;
+    sda::Vec3 flipU1_;
+    sda::Quat flipQ1_;
+    sda::FaceCalibration flipPairs_[4];
+    int flipPairCount_ = 0;
+    sda::SupportFace flipFace() const;
+    void startFlipPair();
+    void updateFlip(const sda::OrientationSnapshot& s);
     void updateAxis(const sda::OrientationSnapshot& s);
 
     lv_obj_t* button(const char* text, int x, int y, int w, lv_event_cb_t cb);

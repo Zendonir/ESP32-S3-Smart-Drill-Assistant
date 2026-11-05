@@ -23,6 +23,8 @@ struct LevelAngles {
     bool flat = true;       ///< screen closer to horizontal than to vertical -> 2D bubble
     float edgeRollDeg = 0;  ///< standing on an edge: rotation in the vertical plane, (-45,45]
     int edgeIndex = 0;      ///< which edge is down (0..3, multiples of 90 deg)
+    float edgePitchDeg = 0; ///< standing on an edge: lean of the screen (+ = leaning back)
+    bool faceCorrected = false; ///< reversal (Umschlag) correction applied
 };
 LevelAngles levelAngles(const Vec3& upD);
 

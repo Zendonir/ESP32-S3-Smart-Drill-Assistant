@@ -284,6 +284,60 @@ void test_calibration_remap_follows_axis_map() {
     TEST_ASSERT_TRUE(c2.validate());
 }
 
+// housing frame H rests on the table; the device (sensor) frame is misaligned
+// against H by a small rotation (the error the reversal measurement finds)
+static void flipScenario(SupportFace face, const Quat& misalign, const Vec3& tableTiltAxis, float tableTiltDeg) {
+    const Vec3 n = supportFaceNominalUp(face);  // face normal in H (= D nominal)
+    // table normal in world, housing placed so that its face normal = table normal
+    const Quat tilt = Quat::fromAxisAngle(tableTiltAxis, deg2rad(tableTiltDeg));
+    const Vec3 tableN = tilt.rotate(Vec3::unitZ());
+    // position 1: q_WH maps n -> tableN (plus some yaw); position 2: rotated 180 deg about tableN
+    const Quat q1 = Quat::fromAxisAngle(tableN, 0.7f) * Quat::fromTwoVectors(n, tableN);
+    const Quat q2 = Quat::fromAxisAngle(tableN, kPi) * q1;
+    auto upD = [&](const Quat& qWH) { return misalign.rotate(qWH.rotateInverse(Vec3::unitZ())); };
+    const FlipResult r = solveFlip(face, upD(q1), upD(q2));
+    TEST_ASSERT_TRUE(r.ok);
+    TEST_ASSERT_FLOAT_WITHIN(0.05f, tableTiltDeg, r.cal.tableTiltDeg);
+    // on a LEVEL table the corrected level must read 0 (independent of the table used)
+    const Vec3 levelUp = misalign.rotate(Quat::fromTwoVectors(n, Vec3::unitZ()).rotateInverse(Vec3::unitZ()));
+    LevelAngles l = levelAngles(levelUp);
+    FaceCalibration none;
+    if (face == SupportFace::Back) {
+        TEST_ASSERT_TRUE(applyFaceCorrections(l, levelUp, r.cal, none));
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, l.tiltXDeg);
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, l.tiltYDeg);
+    } else {
+        TEST_ASSERT_TRUE(applyFaceCorrections(l, levelUp, none, r.cal));
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, l.edgeRollDeg);
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, l.edgePitchDeg);
+    }
+}
+
+void test_flip_calibration_back_and_bottom() {
+    const Quat mis = Quat::fromAxisAngle(Vec3(0.3f, -0.8f, 0.2f), deg2rad(1.2f));
+    flipScenario(SupportFace::Back, mis, Vec3(1, 0.4f, 0), 1.5f);
+    flipScenario(SupportFace::Back, mis, Vec3(-0.2f, 1, 0), 0.0f);
+    flipScenario(SupportFace::Bottom, mis, Vec3(1, 0.4f, 0), 2.0f);
+    // wrong face / too steep table are rejected
+    TEST_ASSERT_FALSE(solveFlip(SupportFace::Back, Vec3(0, 1, 0), Vec3(0, 1, 0)).ok);
+    const Vec3 steep = Quat::fromAxisAngle(Vec3::unitX(), deg2rad(8)).rotate(Vec3::unitZ());
+    TEST_ASSERT_FALSE(solveFlip(SupportFace::Back, steep, Vec3(-steep.x, -steep.y, steep.z)).ok);
+}
+
+void test_flip_combine_and_clear() {
+    FaceCalibration p[2];
+    p[0].errADeg = 0.10f; p[0].errBDeg = -0.20f; p[0].valid = true;
+    p[1].errADeg = 0.14f; p[1].errBDeg = -0.18f; p[1].valid = true;
+    const FaceCalibration c = combineFlips(p, 2);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.12f, c.errADeg);
+    TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.04f, c.spreadDeg);
+    SensorCalibration sc;
+    sc.setFace(SupportFace::Back, c);
+    TEST_ASSERT_TRUE(sc.hasFaceCalibration());
+    sc.addAccelPoint(AccelCalPoint{});  // new accel calibration invalidates the reversal values
+    TEST_ASSERT_FALSE(sc.hasFaceCalibration());
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_gyro_calibration_estimates_bias_and_noise);
@@ -299,5 +353,7 @@ int main(int, char**) {
     RUN_TEST(test_mount_vertical);
     RUN_TEST(test_axis_detection_all_24_mappings);
     RUN_TEST(test_calibration_remap_follows_axis_map);
+    RUN_TEST(test_flip_calibration_back_and_bottom);
+    RUN_TEST(test_flip_combine_and_clear);
     return UNITY_END();
 }

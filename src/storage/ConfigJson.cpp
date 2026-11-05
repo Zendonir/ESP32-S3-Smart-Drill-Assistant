@@ -284,6 +284,17 @@ void calibrationToJson(const SensorCalibration& c, JsonObject o) {
         e["residualMg"] = p.residualMg;
         e["extended"] = p.extended;
     }
+    JsonObject faces = o["faces"].to<JsonObject>();
+    for (int i = 0; i < kSupportFaceCount; ++i) {
+        const FaceCalibration& f = c.face(SupportFace(i));
+        if (!f.valid) continue;
+        JsonObject fo = faces[i == 0 ? "back" : "bottom"].to<JsonObject>();
+        fo["errADeg"] = f.errADeg;
+        fo["errBDeg"] = f.errBDeg;
+        fo["tableTiltDeg"] = f.tableTiltDeg;
+        fo["spreadDeg"] = f.spreadDeg;
+        fo["pairs"] = f.pairs;
+    }
 }
 
 bool calibrationFromJson(JsonObjectConst o, SensorCalibration& out) {
@@ -314,6 +325,18 @@ bool calibrationFromJson(JsonObjectConst o, SensorCalibration& out) {
     SensorCalibration c;
     c.setGyroPoints(gp, ng);
     c.setAccelPoints(ap, na);
+    for (int i = 0; i < kSupportFaceCount; ++i) {
+        JsonObjectConst fo = o["faces"][i == 0 ? "back" : "bottom"];
+        if (fo.isNull()) continue;
+        FaceCalibration f;
+        f.valid = true;
+        f.errADeg = fo["errADeg"] | 0.0f;
+        f.errBDeg = fo["errBDeg"] | 0.0f;
+        f.tableTiltDeg = fo["tableTiltDeg"] | 0.0f;
+        f.spreadDeg = fo["spreadDeg"] | -1.0f;
+        f.pairs = fo["pairs"] | 1;
+        c.setFace(SupportFace(i), f);
+    }
     if (!c.validate()) return false;
     out = c;
     return true;

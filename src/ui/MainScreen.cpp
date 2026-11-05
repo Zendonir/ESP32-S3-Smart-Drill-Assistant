@@ -475,7 +475,7 @@ void MainScreen::updateLevel(const OrientationSnapshot& s, float dt) {
         // bubble rises to the high side: right edge up -> bubble right
         const float total = sqrtf(x * x + y * y);
         updateDeviationView(x, y, total, valid, profile_.toleranceDeg, dt, false, false);
-        lv_label_set_text(lblMode_, rel ? "WAAGE relativ" : "WAAGE");
+        lv_label_set_text(lblMode_, rel ? "WAAGE relativ" : (l.faceCorrected ? "WAAGE · Umschlag" : "WAAGE"));
         status_.valueDeg = total;
         pushHistory(x, y, total, s, dt);
     } else {
@@ -491,7 +491,8 @@ void MainScreen::updateLevel(const OrientationSnapshot& s, float dt) {
         char b[24];
         fmtAngle(b, sizeof(b), valid ? nBig_.update(l.edgeRollDeg) : NAN, true);
         lv_label_set_text(lblBig_, b);
-        lv_label_set_text_fmt(lblXY_, "Kante %d  Neigung %.1f°", l.edgeIndex, double(90.0f - l.screenTiltDeg));
+        lv_label_set_text_fmt(lblXY_, "Kante %d  Neigung %+.1f°%s", l.edgeIndex, double(l.edgePitchDeg),
+                              l.faceCorrected ? "  U" : "");
         lv_label_set_text_fmt(lblInfo_, "±%.2g°", double(profile_.toleranceDeg));
         lv_label_set_text(lblMode_, "WAAGE Kante");
         status_.targetState = st;

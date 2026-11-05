@@ -118,6 +118,8 @@ void SensorCalibration::addGyroPoint(const GyroCalPoint& p, float mergeC) {
 }
 
 void SensorCalibration::addAccelPoint(const AccelCalPoint& p, float mergeC) {
+    // the reversal corrections were measured with the previous accel calibration
+    clearFaces();
     insertPoint(accel_, accelCount_, kMaxAccelCalPoints, p, mergeC);
     sortAccel();
 }
@@ -175,6 +177,7 @@ bool SensorCalibration::accelTempCompActive() const {
 }
 
 void SensorCalibration::remap(const Mat3& R) {
+    clearFaces();  // measured in the old frame
     const Mat3 Rt = R.transposed();
     for (int i = 0; i < gyroCount_; ++i) {
         gyro_[i].biasDps = R * gyro_[i].biasDps;
@@ -197,6 +200,10 @@ bool SensorCalibration::validate() const {
         if (std::isfinite(gyro_[i].tempC) && (gyro_[i].tempC < -40 || gyro_[i].tempC > 100))
             return false;
     }
+    for (const FaceCalibration& f : faces_)
+        if (f.valid && (!std::isfinite(f.errADeg) || !std::isfinite(f.errBDeg) || std::fabs(f.errADeg) > 5.0f ||
+                        std::fabs(f.errBDeg) > 5.0f))
+            return false;
     for (int i = 0; i < accelCount_; ++i) {
         const AccelCalPoint& p = accel_[i];
         if (!finiteVec(p.offset, 0.5f)) return false;

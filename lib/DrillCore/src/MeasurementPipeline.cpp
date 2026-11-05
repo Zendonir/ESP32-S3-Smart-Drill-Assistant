@@ -233,6 +233,7 @@ bool MeasurementPipeline::process(const ImuSample& raw) {
     s.rawGyroDps = gD;
     s.temperatureC = tempC;
     s.level = levelAngles(s.upD);
+    applyFaceCorrections(s.level, s.upD, cal_.face(SupportFace::Back), cal_.face(SupportFace::Bottom));
     s.tiltSigmaDeg = qi.tiltSigmaDeg;
     s.headingSigmaDeg = rad2deg(unc_.headingSigmaRad());
     s.motion = motion_.state();
@@ -453,8 +454,10 @@ void MeasurementPipeline::runPrecision(const Vec3& aCal, float dt) {
         primary = rad2deg(safeAsin(d.dot(u))) + mount_.angleCorrectionDeg;  // signed elevation
         secondary = 0.0f;
     } else {
-        primary = rad2deg(safeAsin(u.x));
-        secondary = rad2deg(safeAsin(u.y));
+        LevelAngles la = levelAngles(u);
+        applyFaceCorrections(la, u, cal_.face(SupportFace::Back), cal_.face(SupportFace::Bottom));
+        primary = la.flat ? la.tiltXDeg : la.edgeRollDeg;
+        secondary = la.flat ? la.tiltYDeg : la.edgePitchDeg;
     }
     // accept only while still and without vibration
     const bool ok = motion_.isStill() && vib_.level() == VibrationLevel::None;

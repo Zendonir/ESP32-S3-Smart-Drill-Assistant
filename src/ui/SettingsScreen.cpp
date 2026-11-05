@@ -138,6 +138,10 @@ void UIManager::menuCalibration() {
             MenuItem::act("Gyroskop", [this] { openCalibration(CalibrationScreen::Kind::Gyro); }),
             MenuItem::act("Sensor 6 Lagen", [this] { openCalibration(CalibrationScreen::Kind::Accel); }),
             MenuItem::act("6 Lagen erweitert", [this] { openCalibration(CalibrationScreen::Kind::AccelExtended); }),
+            MenuItem::act("Umschlag Rückseite", [this] { openCalibration(CalibrationScreen::Kind::FlipBack); },
+                          [this] { return faceText(SupportFace::Back); }),
+            MenuItem::act("Umschlag Unterseite", [this] { openCalibration(CalibrationScreen::Kind::FlipBottom); },
+                          [this] { return faceText(SupportFace::Bottom); }),
             MenuItem::act("Montage V-Nut", [this] { openCalibration(CalibrationScreen::Kind::MountRoll); }),
             MenuItem::act("Montage Ständer", [this] { openCalibration(CalibrationScreen::Kind::MountVertical); }),
             MenuItem::choice("Montage grob", "Display zum Nutzer\nOberkante vorn\nRechte Kante vorn\nDisplay zum Bohrer",
@@ -437,6 +441,14 @@ void UIManager::menuBattery() {
             MenuItem::info("Hinweis", [] { return std::string("Schätzung ±10-20%"); }),
         },
         [this] { menuSystem(); });
+}
+
+std::string UIManager::faceText(SupportFace f) {
+    SensorCalibration c;
+    if (!app_->meas.currentCalibration(c, 50) || !c.face(f).valid) return "nicht kalibriert";
+    char b[48];
+    snprintf(b, sizeof(b), "%+.2f° / %+.2f°", double(c.face(f).errADeg), double(c.face(f).errBDeg));
+    return b;
 }
 
 std::string UIManager::profileOptions() {

@@ -141,6 +141,12 @@ void CalibrationScreen::open(AppContext& app, Kind kind, std::function<void()> o
             setButtons("Abbr.", nullptr, "Erfassen");
             app.meas.startMountCalibration(CalProcedure::MountVertical);
             break;
+        case Kind::FlipBack:
+        case Kind::FlipBottom:
+            lv_label_set_text(title_, kind == Kind::FlipBack ? "Umschlag Rückseite" : "Umschlag Unterseite");
+            flipPairCount_ = 0;
+            startFlipPair();
+            break;
         case Kind::AxisDetect:
             lv_label_set_text(title_, "Achsen erkennen");
             setButtons("Abbr.", nullptr, nullptr);
@@ -178,6 +184,8 @@ void CalibrationScreen::update(const OrientationSnapshot& s) {
         case Kind::MountRoll:
         case Kind::MountVertical: updateMount(s); break;
         case Kind::AxisDetect: updateAxis(s); break;
+        case Kind::FlipBack:
+        case Kind::FlipBottom: updateFlip(s); break;
     }
 }
 
@@ -189,6 +197,90 @@ void CalibrationScreen::askConfirm(const char* title, const char* nextStep, cons
     lv_label_set_text(text_, title);
     lv_label_set_text(detail_, nextStep);
     setButtons("Abbr.", nullptr, button);
+}
+
+SupportFace CalibrationScreen::flipFace() const {
+    return kind_ == Kind::FlipBack ? SupportFace::Back : SupportFace::Bottom;
+}
+
+void CalibrationScreen::startFlipPair() {
+    phase_ = Phase::Running;
+    flipStep_ = 0;
+    flipFrames_ = 0;
+    flipSum_ = Vec3();
+    askConfirm(flipPairCount_ ? "Wiederholung" : "Messung 1/2",
+               kind_ == Kind::FlipBack ? "Display nach oben flach\nan einen Anschlag legen\n(Lineal, Leiste), dann Start"
+                                       : "Auf die Unterseite stellen,\nDisplay zu dir, an einen\nAnschlag, dann Start",
+               "Start");
+}
+
+// Reversal measurement: average of the calibrated gravity direction in two
+// positions rotated by 180 deg about the vertical on the same spot. The rotation
+// is checked with the gyro heading (must be 180 deg +/- 25 deg).
+void CalibrationScreen::updateFlip(const OrientationSnapshot& s) {
+    if (phase_ != Phase::Running || awaitConfirm_) return;
+    constexpr int kFrames = 120;  // ~3 s at the UI rate
+    if (flipStep_ == 1) {
+        const float turned = std::fabs(relativeRotation(flipQ1_, s.qWD).headingDeg);
+        if (std::fabs(turned - 180.0f) > 25.0f) {
+            flipFrames_ = 0;
+            flipSum_ = Vec3();
+            lv_arc_set_value(arc_, 0);
+            lv_label_set_text(text_, "Um 180° drehen");
+            lv_label_set_text_fmt(detail_, "gedreht: %.0f°\nwieder an den Anschlag", double(turned));
+            return;
+        }
+    }
+    if (!s.valid || s.motion != MotionState::Still) {
+        flipFrames_ = 0;
+        flipSum_ = Vec3();
+        lv_arc_set_value(arc_, 0);
+        lv_label_set_text(text_, flipStep_ == 0 ? "Messung 1/2" : "Messung 2/2");
+        lv_label_set_text(detail_, "ruhig liegen lassen ...");
+        return;
+    }
+    lv_label_set_text(text_, flipStep_ == 0 ? "Messung 1/2" : "Messung 2/2");
+    lv_label_set_text(detail_, "messe ...");
+    flipSum_ += s.accelG;  // calibrated, device frame, without face correction
+    ++flipFrames_;
+    lv_arc_set_value(arc_, static_cast<int16_t>(1000 * flipFrames_ / kFrames));
+    if (flipFrames_ < kFrames) return;
+    const Vec3 mean = flipSum_ / float(flipFrames_);
+    flipFrames_ = 0;
+    flipSum_ = Vec3();
+    if (flipStep_ == 0) {
+        flipU1_ = mean;
+        flipQ1_ = s.qWD;
+        flipStep_ = 1;
+        askConfirm(LV_SYMBOL_OK " Messung 1 fertig",
+                   kind_ == Kind::FlipBack ? "Weiter drücken, dann um 180°\ndrehen und wieder an den\nAnschlag legen"
+                                           : "Weiter drücken, dann um 180°\ndrehen (Display zeigt weg),\nwieder an den Anschlag",
+                   "Weiter");
+        return;
+    }
+    const FlipResult r = solveFlip(flipFace(), flipU1_, mean);
+    if (!r.ok) {
+        phase_ = Phase::Failed;
+        lv_label_set_text(text_, "Fehlgeschlagen");
+        lv_label_set_text(detail_, r.error);
+        setButtons(nullptr, "Zurück", nullptr);
+        return;
+    }
+    if (flipPairCount_ < 4) flipPairs_[flipPairCount_++] = r.cal;
+    const FaceCalibration c = combineFlips(flipPairs_, flipPairCount_);
+    phase_ = Phase::Result;
+    lv_label_set_text(text_, "Gerätefehler");
+    const char* bName = kind_ == Kind::FlipBack ? "Y" : "Z";
+    if (c.spreadDeg >= 0)
+        lv_label_set_text_fmt(detail_, "X %+.2f°  %s %+.2f°\nTisch %.2f°  Streuung %.2f°%s", double(c.errADeg), bName,
+                              double(c.errBDeg), double(c.tableTiltDeg), double(c.spreadDeg),
+                              c.spreadDeg > 0.1f ? "\nungenau: Anschlag prüfen" : "");
+    else
+        lv_label_set_text_fmt(detail_, "X %+.2f°  %s %+.2f°\nTisch %.2f°\nNochmal = Kontrolle", double(c.errADeg), bName,
+                              double(c.errBDeg), double(c.tableTiltDeg));
+    setButtons("Verwerfen", flipPairCount_ < 4 ? "Nochmal" : nullptr, "Speichern");
+    lv_obj_align(btnMid_, LV_ALIGN_CENTER, 0, 30);
+    lv_obj_set_width(btnMid_, 100);
 }
 
 void CalibrationScreen::updateAxis(const OrientationSnapshot& s) {
@@ -384,6 +476,10 @@ void CalibrationScreen::onLeft() {
 }
 
 void CalibrationScreen::onMid() {
+    if ((kind_ == Kind::FlipBack || kind_ == Kind::FlipBottom) && phase_ == Phase::Result) {
+        startFlipPair();  // another pair for the repeatability check
+        return;
+    }
     if (phase_ == Phase::Running && (kind_ == Kind::MountRoll)) {
         OrientationSnapshot s;
         app_->meas.snapshot(s);
@@ -403,6 +499,21 @@ void CalibrationScreen::onRight() {
         axisFrames_ = 0;
         axisSum_ = Vec3();
         setButtons(nullptr, "Abbrechen", nullptr);
+        return;
+    }
+    if (kind_ == Kind::FlipBack || kind_ == Kind::FlipBottom) {
+        if (phase_ != Phase::Result) return;
+        SensorCalibration c;
+        bool ok = false;
+        if (app_->meas.currentCalibration(c)) {
+            c.setFace(flipFace(), combineFlips(flipPairs_, flipPairCount_));
+            ok = app_->meas.setCalibration(c) && app_->calStore.save(c);
+        }
+        if (!ok) {
+            lv_label_set_text(detail_, "Speichern fehlgeschlagen\n(Akku kritisch?)");
+            return;
+        }
+        finish(true);
         return;
     }
     if (kind_ == Kind::AxisDetect) {
