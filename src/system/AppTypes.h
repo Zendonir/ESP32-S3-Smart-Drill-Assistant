@@ -32,7 +32,7 @@ struct UiCommand {
     enum class Type : uint8_t {
         SetMode, ToggleHold, Zero, ReloadProfile, ReloadSettings, Wake, DisplayDim, DisplayOff,
         ButtonShort, ButtonDouble, PowerHold, PowerHoldCancel, ShowMessage, BatteryWarning, SetTarget,
-        PrepareSleep, ChargeChanged,
+        PrepareSleep, ChargeChanged, ChargeScreen,
     } type;
     int32_t i = 0;
     float f = 0;
@@ -50,6 +50,7 @@ struct BootReport {
     bool calibrationLoaded = false;
     bool fs = false;
     bool otaPendingVerify = false;
+    bool chargeBoot = false;   ///< woke from "off" because a charger was detected
     uint8_t imuAddress = 0;
     uint8_t touchChip = 0;
     int resetReason = 0;

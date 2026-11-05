@@ -12,6 +12,10 @@ public:
     /// Samples the ADC (16x averaging, eFuse calibrated) and updates the model.
     void update(float dtSec);
     const sda::BatteryModel& model() const { return model_; }
+    sda::BatteryModel& model() { return model_; }
+    /// One-shot battery voltage measurement without model (used right after a
+    /// timer wake-up, before the application starts).
+    static float measureOnce(float dividerFactor);
     float lastRawMilliVolts() const { return rawMv_; }
 
 private:

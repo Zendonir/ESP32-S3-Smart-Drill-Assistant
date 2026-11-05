@@ -35,6 +35,14 @@ NetworkManager g_net(g_app);
 void setup() {
     AppContext& app = g_app;
     system_task::releaseSleepHolds();
+    // periodic charger check while "off": back to sleep within ~0.1 s unless a
+    // charger was connected (display, sensors and WiFi stay off)
+    const bool timerWake = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
+    if (timerWake) {
+        if (!system_task::chargeWakeCheck()) system_task::sleepNow();
+        app.boot.chargeBoot = true;
+        app.chargeMode = true;
+    }
     sda_log::begin(sda_log::Level::Info);
     sda_log::startTask(appcfg::kLogTaskCore, appcfg::kLogTaskPrio, appcfg::kLogTaskStack);
     app.boot.resetReason = static_cast<int>(esp_reset_reason());
@@ -93,6 +101,7 @@ void setup() {
 
     // battery before the measurement tasks (first reading for the warning logic)
     app.battery.begin(s.system.batteryDividerFactor, s.system.lowBatteryV, s.system.criticalBatteryV);
+    if (app.boot.chargeBoot) app.battery.model().setChargerConnected(true);
     {
         char b[40];
         const int pct = app.battery.model().percentEstimate();
@@ -115,6 +124,12 @@ void setup() {
     system_task::start(app);
     g_net.start();
     g_ui.start();  // from here on LVGL belongs to the UI task
+    if (app.boot.chargeBoot) {
+        UiCommand c{};
+        c.type = UiCommand::Type::ChargeScreen;
+        c.i = 2;  // woke up from "off": charge screen only
+        app.postUi(c);
+    }
     LOGI(TAG, "start-up complete, free heap %u", static_cast<unsigned>(esp_get_free_heap_size()));
 }
 

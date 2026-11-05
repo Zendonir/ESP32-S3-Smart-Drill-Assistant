@@ -177,6 +177,44 @@ void test_battery_charge_detection_and_percent_hysteresis() {
     TEST_ASSERT_EQUAL(int(ChargeState::NoBattery), int(n.chargeState()));
 }
 
+void test_battery_plug_step_detection() {
+    BatteryModel b;
+    b.configure(3.5f, 3.35f);
+    float v = 3.80f;
+    for (int i = 0; i < 120; ++i) b.update(v, 0.5f);  // 60 s on battery
+    TEST_ASSERT_FALSE(b.takePlugEvent());
+    // charger plugged: +80 mV step
+    bool plug = false;
+    for (int i = 0; i < 20; ++i) {  // 10 s
+        b.update(v + 0.080f, 0.5f);
+        plug |= b.takePlugEvent();
+    }
+    TEST_ASSERT_TRUE(plug);
+    TEST_ASSERT_EQUAL(int(ChargeState::Charging), int(b.chargeState()));
+    // unplugged: back to the battery voltage
+    bool unplug = false;
+    for (int i = 0; i < 20; ++i) {
+        b.update(v, 0.5f);
+        unplug |= b.takeUnplugEvent();
+    }
+    TEST_ASSERT_TRUE(unplug);
+    TEST_ASSERT_FALSE(b.chargerConnected());
+    // own load change (display off): masked, no plug event
+    b.notifyLoadChange();
+    bool fake = false;
+    for (int i = 0; i < 40; ++i) {
+        b.update(v + 0.050f, 0.5f);
+        fake |= b.takePlugEvent();
+    }
+    TEST_ASSERT_FALSE(fake);
+    // small fluctuations (WiFi bursts, +-15 mV) never trigger
+    for (int i = 0; i < 200; ++i) {
+        b.update(v + 0.050f + ((i & 1) ? 0.015f : -0.015f), 0.5f);
+        fake |= b.takePlugEvent();
+    }
+    TEST_ASSERT_FALSE(fake);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_defaults_are_valid);
@@ -188,5 +226,6 @@ int main(int, char**) {
     RUN_TEST(test_button_short_double_hold_poweroff);
     RUN_TEST(test_button_ignores_power_on_press);
     RUN_TEST(test_battery_charge_detection_and_percent_hysteresis);
+    RUN_TEST(test_battery_plug_step_detection);
     return UNITY_END();
 }

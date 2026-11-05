@@ -79,6 +79,7 @@ struct SystemSettings {
     uint16_t sleepAfterMin = 30;  ///< deep sleep after inactivity, 0 = never
     ButtonAction bootButton = ButtonAction::Hold;
     bool powerOnHold = true;      ///< switching on requires holding BOOT for 1 s
+    uint8_t chargeScreen = 2;     ///< 0 off, 1 while switched on, 2 also wake from "off" to show it
     AxisMap axisMap;              ///< sensor -> device axis mapping
     bool axisMapVerified = false; ///< set by the axis detection wizard
     uint8_t logLevel = 2;         ///< 0 error .. 3 debug

@@ -8,6 +8,7 @@
 #include <LovyanGFX.hpp>
 #include <lvgl.h>
 
+#include "../system/LoadEvents.h"
 #include "../system/Log.h"
 #include "AppConfig.h"
 #include "BoardConfig.h"
@@ -185,12 +186,14 @@ void DisplayDriver::setRotation(uint8_t rotation) {
 
 void DisplayDriver::setBrightness(uint8_t percent) {
     if (percent > 100) percent = 100;
+    if (percent != brightness_) load_events::mark();
     brightness_ = percent;
     if (!sleeping_) g_lcd.setBrightness(static_cast<uint8_t>(percent * 255 / 100));
 }
 
 void DisplayDriver::sleep() {
     if (sleeping_) return;
+    load_events::mark();
     g_lcd.setBrightness(0);
     g_lcd.sleep();
     sleeping_ = true;
@@ -198,6 +201,7 @@ void DisplayDriver::sleep() {
 
 void DisplayDriver::wake() {
     if (!sleeping_) return;
+    load_events::mark();
     g_lcd.wakeup();
     sleeping_ = false;
     setBrightness(brightness_);

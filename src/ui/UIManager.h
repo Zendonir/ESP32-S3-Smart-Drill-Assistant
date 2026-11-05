@@ -93,6 +93,17 @@ private:
     std::string batteryText(bool longForm);
     void menuBattery();
     void showColorTest();
+    // charge screen (top layer)
+    lv_obj_t* chargeOverlay_ = nullptr;
+    lv_obj_t* chargeFill_ = nullptr;
+    lv_obj_t* chargePct_ = nullptr;
+    lv_obj_t* chargeState_ = nullptr;
+    lv_obj_t* chargeHint_ = nullptr;
+    uint32_t chargeHideAtMs_ = 0;
+    uint32_t chargeLastUpdate_ = 0;
+    void showChargeScreen(bool fromOff);
+    void updateChargeScreen();
+    void closeChargeScreen(bool leaveChargeMode);
 
     // main screen events
     static void mainEvent(lv_event_t* e);

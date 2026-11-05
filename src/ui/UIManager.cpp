@@ -68,7 +68,9 @@ void UIManager::start() {
         bootScr_ = nullptr;
         bootList_ = nullptr;
     }
-    if (!app_->boot.imu) main_.showToast("Sensor QMI8658 nicht gefunden!", 6000);
+    if (app_->boot.chargeBoot) {
+        // woke up for the charge screen: no start-up hints
+    } else if (!app_->boot.imu) main_.showToast("Sensor QMI8658 nicht gefunden!", 6000);
     else if (!app_->boot.calibrationLoaded)
         main_.showToast("Bitte kalibrieren:\nMenü > Kalibrierung", 4000);
 
@@ -100,6 +102,14 @@ void UIManager::task() {
         if (app_->profiles.version() != profilesVersion_) applyProfile();
 
         const uint32_t now = millis();
+        if (chargeOverlay_ && now - chargeLastUpdate_ >= 1000) {
+            chargeLastUpdate_ = now;
+            updateChargeScreen();
+        }
+        if (chargeHideAtMs_ && now >= chargeHideAtMs_) {
+            chargeHideAtMs_ = 0;
+            closeChargeScreen(false);
+        }
         if (sleepAtMs_ && now >= sleepAtMs_) {
             sleepAtMs_ = 0;
             app_->display.sleep();
@@ -172,6 +182,10 @@ void UIManager::handleCommand(const UiCommand& c) {
                 wakeDisplay();
                 break;
             }
+            if (chargeOverlay_) {  // BOOT on the charge screen: switch on / back to measuring
+                closeChargeScreen(true);
+                break;
+            }
             buttonAction(settings_.system.bootButton);
             break;
         case T::ButtonDouble:
@@ -184,8 +198,23 @@ void UIManager::handleCommand(const UiCommand& c) {
             break;
         case T::PowerHoldCancel: hidePowerOverlay(); break;
         case T::ChargeChanged:
-            wakeDisplay();
-            showMessage(batteryText(true).c_str(), 2500);
+            if (!chargeOverlay_) {
+                wakeDisplay();
+                showMessage(batteryText(true).c_str(), 2500);
+            }
+            break;
+        case T::ChargeScreen:
+            if (c.i == 0) {
+                // charger removed: short message, then close (charge mode -> system sleeps)
+                if (chargeOverlay_) {
+                    wakeDisplay();
+                    lv_label_set_text(chargeState_, "Ladegerät getrennt");
+                    chargeHideAtMs_ = millis() + 2500;
+                }
+            } else {
+                wakeDisplay();
+                showChargeScreen(c.i == 2);
+            }
             break;
         case T::ShowMessage: showMessage(c.text); break;
         case T::BatteryWarning:
@@ -240,6 +269,92 @@ std::string UIManager::batteryText(bool longForm) {
         snprintf(b, sizeof(b), "Akku ca. %d %%%s", p.batteryPercent, longForm ? "\nAkkubetrieb" : "");
     }
     return b;
+}
+
+// ---------------------------------------------------------------------------
+// Charge screen: shown automatically when a charger is connected. Large battery
+// symbol with fill level, estimated charge and state. Tap / BOOT closes it (and
+// switches the device on when it was "off").
+// ---------------------------------------------------------------------------
+void UIManager::showChargeScreen(bool fromOff) {
+    hidePowerOverlay();
+    if (!chargeOverlay_) {
+        const theme::Palette& p = theme::pal();
+        chargeOverlay_ = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(chargeOverlay_);
+        lv_obj_set_size(chargeOverlay_, 240, 240);
+        lv_obj_set_style_bg_color(chargeOverlay_, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(chargeOverlay_, LV_OPA_COVER, 0);
+        lv_obj_clear_flag(chargeOverlay_, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_flag(chargeOverlay_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(chargeOverlay_, [](lv_event_t* e) {
+            static_cast<UIManager*>(lv_event_get_user_data(e))->closeChargeScreen(true);
+        }, LV_EVENT_CLICKED, this);
+        // battery body
+        lv_obj_t* body = lv_obj_create(chargeOverlay_);
+        lv_obj_remove_style_all(body);
+        lv_obj_set_size(body, 128, 62);
+        lv_obj_align(body, LV_ALIGN_CENTER, -5, -30);
+        lv_obj_set_style_border_width(body, 4, 0);
+        lv_obj_set_style_border_color(body, p.fg, 0);
+        lv_obj_set_style_radius(body, 10, 0);
+        lv_obj_set_style_pad_all(body, 6, 0);
+        lv_obj_clear_flag(body, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* nub = lv_obj_create(chargeOverlay_);
+        lv_obj_remove_style_all(nub);
+        lv_obj_set_size(nub, 8, 26);
+        lv_obj_align_to(nub, body, LV_ALIGN_OUT_RIGHT_MID, 0, 0);
+        lv_obj_set_style_bg_color(nub, p.fg, 0);
+        lv_obj_set_style_bg_opa(nub, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(nub, 3, 0);
+        lv_obj_clear_flag(nub, LV_OBJ_FLAG_CLICKABLE);
+        chargeFill_ = lv_obj_create(body);
+        lv_obj_remove_style_all(chargeFill_);
+        lv_obj_set_height(chargeFill_, lv_pct(100));
+        lv_obj_set_style_radius(chargeFill_, 5, 0);
+        lv_obj_set_style_bg_opa(chargeFill_, LV_OPA_COVER, 0);
+        lv_obj_clear_flag(chargeFill_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* bolt = theme::label(body, theme::large(), p.fg, LV_SYMBOL_CHARGE);
+        lv_obj_center(bolt);
+        chargePct_ = theme::label(chargeOverlay_, theme::huge(), p.fg, "--");
+        lv_obj_align(chargePct_, LV_ALIGN_CENTER, 0, 34);
+        chargeState_ = theme::label(chargeOverlay_, theme::medium(), p.dim, "");
+        lv_obj_align(chargeState_, LV_ALIGN_CENTER, 0, 70);
+        chargeHint_ = theme::label(chargeOverlay_, theme::small(), p.dim, "");
+        lv_obj_align(chargeHint_, LV_ALIGN_TOP_MID, 0, 24);
+    }
+    lv_label_set_text(chargeHint_, fromOff ? "BOOT/Tippen = einschalten" : "Tippen = Messung");
+    chargeHideAtMs_ = 0;
+    chargeLastUpdate_ = 0;
+    updateChargeScreen();
+}
+
+void UIManager::updateChargeScreen() {
+    if (!chargeOverlay_) return;
+    PowerStatus p;
+    app_->power.read(p);
+    const theme::Palette& pal = theme::pal();
+    const int pct = p.batteryPercent < 0 ? 0 : p.batteryPercent;
+    const bool full = p.charge == ChargeState::Full || pct >= 100;
+    lv_obj_set_width(chargeFill_, lv_pct(pct < 4 ? 4 : pct));
+    lv_obj_set_style_bg_color(chargeFill_, full ? pal.ok : (pct < 15 ? pal.far : pal.ok), 0);
+    if (p.batteryPercent < 0) lv_label_set_text(chargePct_, "--");
+    else lv_label_set_text_fmt(chargePct_, "%d%%", p.batteryPercent);
+    if (!chargeHideAtMs_) {
+        if (full) lv_label_set_text(chargeState_, "voll");
+        else if (p.charge == ChargeState::Charging) lv_label_set_text_fmt(chargeState_, "lädt · %.2f V", double(p.batteryV));
+        else lv_label_set_text_fmt(chargeState_, "%.2f V", double(p.batteryV));
+    }
+}
+
+void UIManager::closeChargeScreen(bool leaveChargeMode) {
+    if (chargeOverlay_) lv_obj_del_async(chargeOverlay_);
+    chargeOverlay_ = chargeFill_ = chargePct_ = chargeState_ = chargeHint_ = nullptr;
+    chargeHideAtMs_ = 0;
+    if (leaveChargeMode && app_->chargeMode) {
+        app_->chargeMode = false;  // user switched the device on
+        if (view_ == View::Main) main_.showToast("Eingeschaltet", 1000);
+    }
 }
 
 void UIManager::showPowerHold(float progress) {

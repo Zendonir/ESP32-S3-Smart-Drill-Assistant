@@ -8,7 +8,7 @@ scripts/run_host_tests.sh         # g++ -Werror, AddressSanitizer + UBSan
 scripts/check_fonts.sh            # LVGL mit der Firmware-lv_conf.h auf dem Host: Text in jeder Schrift muss Pixel erzeugen
 ```
 
-80 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
+81 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
 Datengrundlage ist ein deterministischer synthetischer IMU-Generator
 (`test/support/SyntheticImu.h`) mit Rauschen, Bias, Skalen- und Offsetfehlern,
 Vibration und Sample-Verlust.
@@ -21,7 +21,7 @@ Vibration und Sample-Verlust.
 | `test_orientation` | Wasserwaage flach und Kante, relative Neigung, senkrechtes Ziel (2D, Richtung), waagerechtes Ziel (nur Elevation, Seite frei), 45° mit Hemisphärenwechsel, Winkelkorrektur, Richtungsziel seitlich, Fläche eingeschränkt vs. 3D, relativer Azimut, Winkelbezug (Vertikale = 90° − Horizontale, Nullpunkt oben/unten driftfrei mit beliebigem Azimut, über die Senkrechte ungültig, links/rechts nur mit 3D-Nullpunkt, Vorzeichen, senkrechte Bezugsachse ungültig) |
 | `test_detectors` | Stillstand nach Haltezeit, schnell/langsam, langsames Kriechen ist kein Stillstand, Vibrationsstufen mit Rückstufung, Accel-Vertrauen, Stillstand ohne Kalibrierung (Gyro-Offset, Skalenfehler), Zeitschätzer (±3 % ODR, Überlauf, Verlust, Duplikat, Lücke), Fallback auf Host-Zeit, Werkzeugzustand |
 | `test_display` | Zielhysterese und Haltezeit, ungültig ist nie grün, automatische Skala, Randbegrenzung des Markers, One-Euro, Zahlenhysterese, Präzisionsstatistik, Drifterkennung, Ringpuffer |
-| `test_settings` | Defaults gültig, Reparatur ungültiger Werte (NaN, Bereich, Hostname, Passwortlänge, Achsabbildung), Idempotenz, Profilvalidierung, Akkumodell, Ladeerkennung (Entladen, Laden ohne USB-Host, voll an USB, kein Akku), Prozent-Hysterese, Tastenlogik (kurz, doppelt, Halten mit Abbruch, Ausschalten nach 3 s, Ignorieren des Einschalt-Drucks) |
+| `test_settings` | Defaults gültig, Reparatur ungültiger Werte (NaN, Bereich, Hostname, Passwortlänge, Achsabbildung), Idempotenz, Profilvalidierung, Akkumodell, Ladeerkennung (Spannungssprung beim Anstecken/Abziehen, Maskierung eigener Laständerungen, Entladen, Laden ohne USB-Host, voll an USB, kein Akku), Prozent-Hysterese, Tastenlogik (kurz, doppelt, Halten mit Abbruch, Ausschalten nach 3 s, Ignorieren des Einschalt-Drucks) |
 | `test_pipeline` | Gesamtkette: statische Genauigkeit (< 0,05° synthetisch), schnelle Drehung, Vibration (keine grüne Freigabe, Orientierung bleibt), lange Vibration lässt σ wachsen, festhängende Daten ergeben Sensorfehler, Sample-Verlust-Flag, Gyro-Kalibrierung, Online-Bias, Präzisionsmessung, Referenzdrift, Montagekalibrierung |
 
 Die synthetischen Genauigkeiten belegen nur die **Korrektheit der Algorithmen**, nicht
@@ -69,6 +69,10 @@ Ergänzend:
      `app.boot.imu = false` erzwingen). Erwartung: Rollback auf B.
   4. Strom während des Uploads trennen. Erwartung: Das Gerät startet mit B.
 * **Ein/Aus**: 3 s halten schaltet aus. Bei 2 s loslassen bricht der Countdown ab. Kurz drücken im Aus-Zustand: Das Gerät bleibt aus. 1 s halten: Es startet. Den Ruhestrom im Aus-Zustand messen.
+* **Ladeanzeige**:
+  1. Gerät an, Netzteil anstecken: Die Ladeanzeige erscheint in wenigen Sekunden. Abziehen: Sie verschwindet.
+  2. Gerät aus, 2 min warten, Netzteil anstecken: Nach spätestens etwa 30 s erscheint die Ladeanzeige. Abziehen: Das Gerät schläft wieder.
+  3. Display dimmen/aus und WLAN ein/aus darf keine Ladeanzeige auslösen.
 * **Ladestand**: Akkuspannung mit einem Multimeter gegenprüfen. Ladegerät und PC anstecken bzw. abziehen und beobachten, wie die Anzeige „lädt“/„voll“ wechselt.
 * **Energie**: Dimmen, Display aus, Deep-Sleep und Aufwachen mit BOOT. Stromaufnahme in
   jedem Zustand mit einem USB-Messgerät dokumentieren.
@@ -96,6 +100,6 @@ Messungen nicht**. Mit den Messungen lassen sich die Modellparameter überprüfe
 
 * Firmware-Build (`sda_s3_touch_128`): erfolgreich mit PlatformIO 6.1, espressif32 6.9.0
   und Arduino-ESP32 2.0.17.
-* Host-Tests: 80/80 bestanden.
+* Host-Tests: 81/81 bestanden.
 * **Hardwaretests 1–13: noch nicht durchgeführt.** Es lag keine Hardware vor. Ergebnisse
   bitte im Format der Tabelle oben unter `docs/results/` ablegen.

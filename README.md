@@ -94,6 +94,15 @@ Die Bibliotheken sind auf exakte Versionen festgelegt, siehe [docs/Dependencies.
 | BOOT 3 s halten | **Ausschalten**: Countdown-Ring, Loslassen bricht ab. Danach Anzeige „Aus“ mit Ladestand |
 | BOOT (ausgeschaltet) | **Einschalten**: 1 s halten (Standard, schützt vor versehentlichem Einschalten) oder kurz drücken (Einstellung *System › Einschalten*) |
 
+**Ladeanzeige:** Beim Anstecken eines Ladegeräts erscheint automatisch eine große Ladeanzeige mit Akkusymbol, Prozent und Zustand („lädt“ oder „voll“). Beim Abziehen verschwindet sie wieder.
+Tippen oder BOOT schließt sie bzw. schaltet das Gerät ein.
+Erkannt wird das Laden am Spannungssprung beim Anstecken (wenige Sekunden).
+* *Gerät aus:* Es wacht alle 30 s für etwa 0,1 s auf (Display bleibt aus), misst die Akkuspannung und startet bei erkanntem Laden mit der Ladeanzeige. Nach dem Abziehen schläft es wieder ein.
+* *Ausschalten während des Ladens:* Statt „Aus“ erscheint die Ladeanzeige.
+
+Einstellung: *System › Ladeanzeige* (Aus / Nur wenn an / Auch wenn aus).
+Die Prüfung im Aus-Zustand kostet etwas Ruhestrom; „Nur wenn an“ schaltet sie ab.
+
 **Ladestand:** In der Kopfzeile stehen ein Akkusymbol und der geschätzte Ladestand in 5-%-Schritten.
 Beim Laden erscheint ein Blitz in Grün, an USB mit vollem Akku „USB“.
 Beim Einschalten, beim Aufwecken des Displays, beim Anstecken eines Ladegeräts und auf dem „Aus“-Bildschirm wird der Ladestand kurz eingeblendet.

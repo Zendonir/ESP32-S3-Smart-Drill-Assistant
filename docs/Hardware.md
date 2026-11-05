@@ -103,6 +103,13 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
 | Display aus (Panel-Sleep, Backlight aus) | `offAfterSec` | Berührung (CST816S bleibt aktiv), Bewegung, BOOT |
 | Deep-Sleep („Aus“) | BOOT 3 s halten, Menü „Ausschalten“, `sleepAfterMin` Inaktivität oder kritischer Akku (nicht während des Ladens) | **BOOT-Taste (GPIO0, ext0)**, standardmäßig 1 s halten |
 
+**Ladeerkennung im Aus-Zustand.** Mit der Einstellung „Ladeanzeige: Auch wenn aus“ wacht das Gerät per RTC-Timer alle 30 s auf.
+Es misst die Akkuspannung (32 ADC-Werte, ohne Display, WLAN und Sensoren) und vergleicht sie mit der vorigen Messung im RTC-Speicher.
+Steigt die Spannung um mindestens 60 mV oder liegt sie über 4,30 V, startet es mit der Ladeanzeige; sonst schläft es nach ca. 0,1 s weiter.
+Die ersten zwei Prüfungen nach dem Ausschalten zählen nicht, weil die Zellspannung nach dem Wegfall der Last ohnehin ansteigt.
+Der zusätzliche mittlere Strombedarf hängt von Boot-Dauer und Board-Ruhestrom ab und ist noch zu messen; grob sind es einige zehn µA.
+Ein Ladegerät, das bereits beim Ausschalten steckt, löst keinen Sprung aus. Für diesen Fall zeigt das Gerät beim Ausschalten direkt die Ladeanzeige.
+
 **Ein/Aus-Taste.** Das Board hat keinen eigenen Einschalter, deshalb dient BOOT als Ein/Aus-Taste.
 „Aus“ ist Deep-Sleep, keine Trennung vom Akku.
 Vor dem Schlafen wartet die Firmware, bis die Taste losgelassen ist (sonst würde ext0 sofort wieder wecken).

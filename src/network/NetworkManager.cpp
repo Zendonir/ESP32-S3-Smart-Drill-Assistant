@@ -8,6 +8,7 @@
 #include <cstring>
 
 #include "../system/AppContext.h"
+#include "../system/LoadEvents.h"
 #include "../system/Log.h"
 #include "AppConfig.h"
 #include "WebApi.h"
@@ -70,6 +71,7 @@ void NetworkManager::applySettings(bool force) {
     sda::copyString(apPass_, sizeof(apPass_), s.system.apPassword);
     sda::copyString(host_, sizeof(host_), s.system.hostname);
     mdns_ = s.system.mdns;
+    load_events::mark();  // WiFi changes the current draw considerably
     stopAll();
     switch (s.system.wifiMode) {
         case sda::WifiMode::Off: LOGI(TAG, "WiFi off"); break;

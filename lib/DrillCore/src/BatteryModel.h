@@ -10,7 +10,12 @@
 // in the schematic). It is therefore INFERRED from
 //   * a USB host connection (USB Serial/JTAG start-of-frame activity) and/or
 //   * a rising voltage trend over a 2 minute window (>= 6 mV/min).
-// A wall charger without data lines is only detected via the voltage trend.
+//   * a voltage STEP when the charger is plugged in or removed: the charge current
+//     raises the terminal voltage immediately (I x R_internal, typ. 50..200 mV),
+//     unplugging drops it again. Steps caused by the device's own load changes
+//     (display brightness/on/off) are masked via notifyLoadChange().
+// A wall charger without data lines is detected via the step (seconds) or the
+// trend (1-2 minutes).
 #pragma once
 
 #include <cstdint>
@@ -35,6 +40,18 @@ public:
     void update(float volts, float dtSec);
     /// USB host present (from the USB Serial/JTAG controller), optional input.
     void setUsbHost(bool connected) { usbHost_ = connected; }
+    /// The device changed its own load (display on/off, brightness): voltage steps
+    /// in the next seconds are not interpreted as plug/unplug.
+    void notifyLoadChange() { maskSec_ = 5.0f; }
+    /// External knowledge that a charger is connected (e.g. woke up because of it).
+    void setChargerConnected(bool c) { chargerLatched_ = c; }
+    /// Charger plugged/unplugged detected since the last call (edge events).
+    bool takePlugEvent() { const bool e = plugEvent_; plugEvent_ = false; return e; }
+    bool takeUnplugEvent() { const bool e = unplugEvent_; unplugEvent_ = false; return e; }
+    /// Last estimate whether a charger is connected (step latch or USB host or trend).
+    bool chargerConnected() const { return charge_ == ChargeState::Charging || charge_ == ChargeState::Full; }
+    /// Threshold for the plug/unplug voltage step (volts).
+    static constexpr float kStepV = 0.035f;
     float voltage() const { return v_; }
     bool valid() const { return init_; }
     /// Estimated state of charge 0..100 in 5 % steps (with hysteresis), -1 if unknown.
@@ -59,6 +76,12 @@ private:
     float histAccum_ = 0.0f;
     float trendMvPerMin_ = 0.0f;
     int shownPercent_ = -1;
+    // plug detection
+    float fast_ = 0.0f, base_ = 0.0f;
+    float stepUpSec_ = 0.0f, stepDownSec_ = 0.0f, maskSec_ = 0.0f;
+    bool chargerLatched_ = false;
+    bool plugEvent_ = false, unplugEvent_ = false;
+    void updateSteps(float volts, float dt);
     void updateCharge();
 };
 

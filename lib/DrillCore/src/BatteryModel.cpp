@@ -35,6 +35,8 @@ float BatteryModel::socFromVoltage(float v) {
 
 void BatteryModel::reset() {
     init_ = false;
+    chargerLatched_ = plugEvent_ = unplugEvent_ = false;
+    stepUpSec_ = stepDownSec_ = maskSec_ = 0.0f;
     histN_ = 0;
     histAccum_ = 0;
     trendMvPerMin_ = 0;
@@ -47,6 +49,7 @@ void BatteryModel::update(float volts, float dt) {
     if (!std::isfinite(volts) || volts < 0.0f || volts > 6.0f) return;
     if (!init_) {
         v_ = volts;
+        fast_ = base_ = volts;
         init_ = true;
     } else {
         // 10 s time constant: smooths load steps (backlight, WiFi bursts)
@@ -82,6 +85,7 @@ void BatteryModel::update(float volts, float dt) {
             trendMvPerMin_ = (hist_[histN_ - 1] - hist_[0]) * 1000.0f / minutes;
         }
     }
+    updateSteps(volts, dt);
     updateCharge();
 
     // displayed percentage: 5 % steps, changes only when the estimate leaves the
@@ -92,6 +96,36 @@ void BatteryModel::update(float volts, float dt) {
         const float soc = socFromVoltage(v_);
         const int step = static_cast<int>(std::lround(soc / 5.0f) * 5);
         if (shownPercent_ < 0 || std::fabs(soc - static_cast<float>(shownPercent_)) > 5.5f) shownPercent_ = step;
+    }
+}
+
+void BatteryModel::updateSteps(float volts, float dt) {
+    // fast follower (2 s) against a slow baseline (30 s): a sustained difference
+    // of >= kStepV for 3 s is a plug (+) or unplug (-) event
+    fast_ += (volts - fast_) * (dt / (2.0f + dt));
+    if (maskSec_ > 0.0f) {
+        maskSec_ -= dt;
+        base_ = fast_;  // own load change: re-baseline, no event
+        stepUpSec_ = stepDownSec_ = 0.0f;
+        return;
+    }
+    const float d = fast_ - base_;
+    stepUpSec_ = d >= kStepV ? stepUpSec_ + dt : 0.0f;
+    stepDownSec_ = d <= -kStepV ? stepDownSec_ + dt : 0.0f;
+    if (stepUpSec_ >= 3.0f) {
+        if (!chargerLatched_) plugEvent_ = true;
+        chargerLatched_ = true;
+        base_ = fast_;
+        stepUpSec_ = 0.0f;
+    } else if (stepDownSec_ >= 3.0f) {
+        if (chargerLatched_ || charge_ == ChargeState::Charging || charge_ == ChargeState::Full) unplugEvent_ = true;
+        chargerLatched_ = false;
+        base_ = fast_;
+        stepDownSec_ = 0.0f;
+        histN_ = 0;  // discard the rising trend of the charging phase
+        trendMvPerMin_ = 0.0f;
+    } else if (stepUpSec_ == 0.0f && stepDownSec_ == 0.0f) {
+        base_ += (fast_ - base_) * (dt / (30.0f + dt));
     }
 }
 
@@ -106,7 +140,7 @@ void BatteryModel::updateCharge() {
     }
     const bool history = histN_ >= 5;  // >= 1 minute
     const bool rising = history && trendMvPerMin_ >= (charge_ == ChargeState::Charging ? 2.0f : 6.0f);
-    if (usbHost_) {
+    if (usbHost_ || chargerLatched_) {
         charge_ = v_ >= 4.15f && !rising ? ChargeState::Full : ChargeState::Charging;
     } else if (rising) {
         charge_ = ChargeState::Charging;

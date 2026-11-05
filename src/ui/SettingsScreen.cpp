@@ -322,6 +322,9 @@ void UIManager::menuSystem() {
                           [this] { return std::string(app_->imu.isHealthy() ? "ok" : "FEHLER"); }),
             MenuItem::act("Diagnose", [this] { openDiagnostics(); }),
             MenuItem::act("Farbtest", [this] { showColorTest(); }),
+            MenuItem::choice("Ladeanzeige", "Aus\nNur wenn an\nAuch wenn aus",
+                             [&sm] { return int(sm.get().system.chargeScreen); },
+                             [&sm](int i) { sm.update([i](AppSettings& s) { s.system.chargeScreen = uint8_t(i); }); }),
             MenuItem::choice("Einschalten", "BOOT kurz drücken\nBOOT 1 s halten",
                              [&sm] { return sm.get().system.powerOnHold ? 1 : 0; },
                              [&sm](int i) { sm.update([i](AppSettings& s) { s.system.powerOnHold = i == 1; }); }),
@@ -348,8 +351,7 @@ void UIManager::menuSystem() {
             MenuItem::choice("Log-Level", "Fehler\nWarnung\nInfo\nDebug", [&sm] { return int(sm.get().system.logLevel); },
                              [&sm](int i) { sm.update([i](AppSettings& s) { s.system.logLevel = uint8_t(i); }); }),
             MenuItem::confirm("Ausschalten", "Gerät ausschalten?\nEinschalten: BOOT-Taste", [this] {
-                app_->display.sleep();
-                system_task::enterDeepSleep(*app_);
+                system_task::requestPowerOff(*app_);
             }),
             MenuItem::confirm("Neustart", "Gerät neu starten?", [this] {
                 app_->settings.tick(millis(), true);

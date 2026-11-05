@@ -10,7 +10,16 @@ void BatteryManager::begin(float dividerFactor, float lowV, float criticalV) {
     model_.configure(lowV, criticalV);
     analogReadResolution(12);
     analogSetPinAttenuation(board::kBatteryAdc, ADC_11db);  // up to ~3.1 V at the pin
+    model_.notifyLoadChange();  // start-up load changes are not plug events
     update(0.5f);
+}
+
+float BatteryManager::measureOnce(float factor) {
+    analogReadResolution(12);
+    analogSetPinAttenuation(board::kBatteryAdc, ADC_11db);
+    uint32_t sum = 0;
+    for (int i = 0; i < 32; ++i) sum += analogReadMilliVolts(board::kBatteryAdc);
+    return static_cast<float>(sum) / 32.0f * factor / 1000.0f;
 }
 
 void BatteryManager::update(float dtSec) {

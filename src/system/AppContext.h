@@ -56,7 +56,7 @@ struct AppContext {
     QMI8658Driver imu;
     TouchDriver touch;
     DisplayDriver display;
-    BatteryManager battery;
+    BatteryManager battery;  // only used by the system task (and once in setup)
     BootButton button;
 
     SettingsManager settings;
@@ -71,6 +71,7 @@ struct AppContext {
     BootReport boot;
     volatile bool networkActive = false;
     volatile bool startupGyroPending = false;  ///< automatic gyro calibration after boot
+    volatile bool chargeMode = false;          ///< "switched off" but showing the charge screen
 
     bool postUi(const UiCommand& c) const {
         return uiQueue && xQueueSend(uiQueue, &c, pdMS_TO_TICKS(5)) == pdTRUE;
