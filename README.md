@@ -9,7 +9,7 @@ einer kreisförmigen Zielanzeige, wie weit die Bohrachse vom Sollwinkel abweicht
 arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optional.
 
 > **Stand der Verifikation:** Die Firmware wird mit PlatformIO vollständig gebaut, und die
-> hardwareunabhängige Messbibliothek ist mit 74 Unit-Tests auf dem Host geprüft.
+> hardwareunabhängige Messbibliothek ist mit 77 Unit-Tests auf dem Host geprüft.
 > **Auf echter Hardware ist sie noch nicht getestet.** Pinbelegung, Achsorientierung des
 > QMI8658, Farbinvertierung des Displays, Touch-Orientierung und Akku-Spannungsteiler
 > müssen am konkreten Board geprüft werden, siehe [docs/Hardware.md](docs/Hardware.md)
@@ -90,7 +90,17 @@ Die Bibliotheken sind auf exakte Versionen festgelegt, siehe [docs/Dependencies.
 | Lange drücken | Nullpunkt setzen, Fläche erfassen oder Präzisionsmessung starten (je nach Modus). Bei aktivem Hold wird der Wert gespeichert |
 | Doppeltippen | Hold an/aus |
 | BOOT kurz | konfigurierbar (Hold, Nullpunkt, nächster Modus, Touchsperre) |
-| BOOT lang | Touchsperre an/aus. Entsperren alternativ durch 2,5 s Halten auf dem Display |
+| BOOT doppelt | Touchsperre an/aus. Entsperren alternativ durch 2,5 s Halten auf dem Display |
+| BOOT 3 s halten | **Ausschalten**: Countdown-Ring, Loslassen bricht ab. Danach Anzeige „Aus“ mit Ladestand |
+| BOOT (ausgeschaltet) | **Einschalten**: 1 s halten (Standard, schützt vor versehentlichem Einschalten) oder kurz drücken (Einstellung *System › Einschalten*) |
+
+**Ladestand:** In der Kopfzeile stehen ein Akkusymbol und der geschätzte Ladestand in 5-%-Schritten.
+Beim Laden erscheint ein Blitz in Grün, an USB mit vollem Akku „USB“.
+Beim Einschalten, beim Aufwecken des Displays, beim Anstecken eines Ladegeräts und auf dem „Aus“-Bildschirm wird der Ladestand kurz eingeblendet.
+Details (Spannung, Zustand, Trend) unter *System › Akku*.
+Der Ladestand ist eine Schätzung aus der Spannung (±10–20 %).
+„Lädt“ wird aus einer USB-Verbindung zum PC oder aus steigender Spannung abgeleitet, weil das Board kein Ladestatussignal an den ESP32 führt (laut Schaltplan zu prüfen).
+Ein reines Netzteil erkennt die Firmware erst nach etwa 1–2 min am Spannungsanstieg.
 
 Typischer Ablauf: Gerät einschalten → das zuletzt aktive Profil wird geladen →
 Sollwinkel im Schnellmenü wählen (z. B. 90° für senkrechtes Bohren) → Bohrer ausrichten,

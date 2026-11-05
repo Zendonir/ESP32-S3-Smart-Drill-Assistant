@@ -80,7 +80,11 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
   **Polarität, Steckertyp und Ladestrom** stehen im Schaltplan der vorliegenden Revision.
   Waveshare-Boards verwenden typischerweise MX1.25-Stecker, die Polarität ist aber nicht
   bei allen Akkuherstellern gleich. Vor dem Anschließen nachmessen.
-* Die Firmware misst nur die Spannung. Ob gerade geladen wird, ist ohne Statuspin nicht
+* Ladeerkennung (heuristisch): Ist ein USB-Host angeschlossen (Start-of-Frame-Aktivität am USB-Serial/JTAG-Controller), gilt der Akku als „lädt“, ab 4,15 V als „voll (USB)“.
+  Ohne Datenverbindung (Netzteil) wird Laden an einer steigenden Spannung erkannt: mindestens 6 mV/min über ein 2-Minuten-Fenster.
+  Ein Ladestatus-Pin ist der Firmware nicht bekannt.
+  Falls der Schaltplan einen CHRG/STDBY-Ausgang an einem GPIO zeigt, sollte er stattdessen ausgewertet werden.
+* Die Firmware misst ansonsten nur die Spannung. Ob gerade geladen wird, ist ohne Statuspin nicht
   erkennbar. Über 4,30 V wird „USB“ angezeigt.
 * Der Ladestand ist eine **Schätzung** aus einer typischen Leerlaufspannungskurve,
   gerundet auf 5 %. Unter Last oder beim Laden ist er ungenau.
@@ -93,7 +97,17 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
 |---|---|---|
 | Dimmen (20 %) | keine Berührung und keine Bewegung für `dimAfterSec` | Berührung, Bewegung, BOOT |
 | Display aus (Panel-Sleep, Backlight aus) | `offAfterSec` | Berührung (CST816S bleibt aktiv), Bewegung, BOOT |
-| Deep-Sleep | Menü „Ausschalten“, `sleepAfterMin` Inaktivität oder kritischer Akku | **BOOT-Taste (GPIO0, ext0)** |
+| Deep-Sleep („Aus“) | BOOT 3 s halten, Menü „Ausschalten“, `sleepAfterMin` Inaktivität oder kritischer Akku (nicht während des Ladens) | **BOOT-Taste (GPIO0, ext0)**, standardmäßig 1 s halten |
+
+**Ein/Aus-Taste.** Das Board hat keinen eigenen Einschalter, deshalb dient BOOT als Ein/Aus-Taste.
+„Aus“ ist Deep-Sleep, keine Trennung vom Akku.
+Vor dem Schlafen wartet die Firmware, bis die Taste losgelassen ist (sonst würde ext0 sofort wieder wecken).
+Außerdem hält sie den Backlight-Pin über `gpio_hold` auf LOW, damit die Hintergrundbeleuchtung im Schlaf nicht durch einen offenen Pin glimmt.
+Nach dem Aufwachen wird die Taste 1 s lang geprüft; wird sie früher losgelassen, schläft das Gerät sofort wieder ein.
+Den Ruhestrom im Aus-Zustand (ESP32-S3, Spannungsregler, Ladeschaltung, IMU im Power-Down, Touch im Deep-Sleep) bitte mit einem Strommessgerät ermitteln.
+Er hängt von der Boardbeschaltung ab und ist hier nicht verifiziert.
+Für lange Lagerung empfiehlt sich ein **Schiebeschalter in der Akkuleitung** (Plusleitung zwischen Akku und Stecker), der den Akku wirklich trennt.
+Geladen werden kann dann nur in Stellung „Ein“.
 
 Vor dem Deep-Sleep werden ausstehende Einstellungen gespeichert, der QMI8658 wird
 abgeschaltet (CTRL7 = 0, Oszillator aus), der CST816S in Deep-Sleep versetzt und das

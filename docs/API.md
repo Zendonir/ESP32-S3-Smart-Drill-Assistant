@@ -46,7 +46,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | Methode | Pfad | Beschreibung |
 |---|---|---|
 | GET | `/` | Weboberfläche (gzip, ohne Auth; alle Daten kommen aus der API) |
-| GET | `/api/status` | Firmware, Partition, Bestätigung des Images, Laufzeit, Heap, CPU-Schätzung, Modus, Qualität, Akku, WLAN, Selbsttest |
+| GET | `/api/status` | `battery.chargeState`, `chargeStateName`, `trendMvPerMin`, `usbHost`; außerdem Firmware, Partition, Bestätigung des Images, Laufzeit, Heap, CPU-Schätzung, Modus, Qualität, Akku, WLAN, Selbsttest |
 | GET | `/api/imu` | kalibrierte und rohe Accel/Gyro-Werte (Geräteframe), Temperatur, Rate, verlorene Samples, Fehlerzähler, Vibration, Bewegung, Werkzeugzustand |
 | GET | `/api/orientation` | `deviation.angleReference`, `targetValid`, `needsZero`, `targetUsesGyro`, `targetElevationDeg`, `problem`; dazu Quaternion, Up-Vektor, Wasserwaage, Bohrachse (Elevation, Neigung, Rolle, Azimut *driftend*), Abweichung, geschätzte Unsicherheit, Referenz, Präzisionsergebnis |
 | GET | `/api/config` | Einstellungen (ohne Passwörter, `passwordSet`) |
@@ -84,7 +84,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
               "colorMode": 0, "largeFont": 0, "decimals": 1, "touchLockAuto": false,
               "showHistory": true, "historyWindowSec": 15},
   "system": {"wifiMode": 0, "ssid": "", "hostname": "smartdrill", "mdns": true, "sleepAfterMin": 30,
-             "bootButton": 0, "axisMap": "+X+Y+Z", "logLevel": 2, "batteryDividerFactor": 3.0,
+             "bootButton": 0, "powerOnHold": true, "axisMap": "+X+Y+Z", "logLevel": 2, "batteryDividerFactor": 3.0,
              "lowBatteryV": 3.5, "criticalBatteryV": 3.35, "activeProfile": 0, "liveRateHz": 10,
              "passwordSet": false}
 }
@@ -126,5 +126,6 @@ als JSON gesendet. Das Erzeugen geschieht ohne Heap per `snprintf` im Netzwerk-T
 | `rate`, `lost` | gemessene Abtastrate, verlorene Samples |
 | `bat`, `pct` | Akkuspannung, geschätzter Ladestand (−1 = unbekannt) |
 | `gcal`, `acal` | Gyro- bzw. Accel-Kalibrierung vorhanden |
+| `chg` | Ladezustand: 0 unbekannt, 1 Akkubetrieb, 2 lädt (abgeleitet), 3 voll an USB, 4 kein Akku |
 | `cal` | `{p: Verfahren, pr: Fortschritt, mask: akzeptierte Lagen, det: erkannte Lage, act: aktive Lage, seq: Ergebniszähler}` |
 | `fps` | UI-Bildrate |

@@ -402,19 +402,23 @@ void MainScreen::updateHeader(const OrientationSnapshot& s, const PowerStatus& p
     if (q == QualityState::CalibrationRequired && s.hasGyroCal) qs = "UNKALIBR.";
     lv_label_set_text(lblQuality_, s.valid ? qs : "START");
     lv_obj_set_style_text_color(lblQuality_, theme::qualityColor(q), 0);
-    if (p.level == BatteryLevel::External) snprintf(b, sizeof(b), LV_SYMBOL_USB);
-    else if (p.batteryPercent < 0) snprintf(b, sizeof(b), LV_SYMBOL_BATTERY_EMPTY " --");
-    else {
-        const char* sym = p.batteryPercent > 80 ? LV_SYMBOL_BATTERY_FULL
-                          : p.batteryPercent > 55 ? LV_SYMBOL_BATTERY_3
-                          : p.batteryPercent > 30 ? LV_SYMBOL_BATTERY_2
-                          : p.batteryPercent > 10 ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY;
+    if (p.charge == ChargeState::Full) {
+        snprintf(b, sizeof(b), LV_SYMBOL_USB " " LV_SYMBOL_BATTERY_FULL);
+    } else if (p.charge == ChargeState::NoBattery || p.batteryPercent < 0) {
+        snprintf(b, sizeof(b), p.usbHost ? LV_SYMBOL_USB : LV_SYMBOL_BATTERY_EMPTY " --");
+    } else {
+        const char* sym = p.charge == ChargeState::Charging ? LV_SYMBOL_CHARGE
+                          : p.batteryPercent > 80           ? LV_SYMBOL_BATTERY_FULL
+                          : p.batteryPercent > 55           ? LV_SYMBOL_BATTERY_3
+                          : p.batteryPercent > 30           ? LV_SYMBOL_BATTERY_2
+                          : p.batteryPercent > 10           ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY;
         snprintf(b, sizeof(b), "%s %d%%", sym, p.batteryPercent);
     }
     lv_label_set_text(lblBattery_, b);
     const theme::Palette& pal = theme::pal();
     lv_obj_set_style_text_color(lblBattery_,
-                                p.level == BatteryLevel::Critical ? pal.far
+                                p.charge == ChargeState::Charging ? pal.ok
+                                : p.level == BatteryLevel::Critical ? pal.far
                                 : p.level == BatteryLevel::Low    ? pal.warn : pal.dim, 0);
 }
 

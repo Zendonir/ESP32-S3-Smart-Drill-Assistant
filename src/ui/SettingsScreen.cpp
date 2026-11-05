@@ -304,13 +304,13 @@ void UIManager::menuSystem() {
                 app_->net.read(n);
                 return n.connected ? std::string("http://") + n.ip + "/" : std::string("WLAN aktivieren");
             }),
-            MenuItem::info("Akku", [this] {
+            MenuItem::act("Akku", [this] { menuBattery(); }, [this] {
                 PowerStatus p;
                 app_->power.read(p);
-                char b[40];
-                if (p.level == BatteryLevel::External) snprintf(b, sizeof(b), "USB %.2f V", double(p.batteryV));
-                else if (p.batteryPercent < 0) snprintf(b, sizeof(b), "kein Akku?");
-                else snprintf(b, sizeof(b), "%.2f V ca.%d%%", double(p.batteryV), p.batteryPercent);
+                char b[32];
+                if (p.batteryPercent < 0) snprintf(b, sizeof(b), "--");
+                else snprintf(b, sizeof(b), "ca. %d %%%s", p.batteryPercent,
+                              p.charge == ChargeState::Charging ? " " LV_SYMBOL_CHARGE : "");
                 return std::string(b);
             }),
             MenuItem::info("Firmware", [] { return std::string(SDA_FW_VERSION_STR); }),
@@ -318,7 +318,10 @@ void UIManager::menuSystem() {
             MenuItem::act("Sensorstatus", [this] { openDiagnostics(); },
                           [this] { return std::string(app_->imu.isHealthy() ? "ok" : "FEHLER"); }),
             MenuItem::act("Diagnose", [this] { openDiagnostics(); }),
-            MenuItem::choice("BOOT-Taste", "Hold\nNullpunkt\nNächster Modus\nTouchsperre",
+            MenuItem::choice("Einschalten", "BOOT kurz drücken\nBOOT 1 s halten",
+                             [&sm] { return sm.get().system.powerOnHold ? 1 : 0; },
+                             [&sm](int i) { sm.update([i](AppSettings& s) { s.system.powerOnHold = i == 1; }); }),
+            MenuItem::choice("BOOT kurz", "Hold\nNullpunkt\nNächster Modus\nTouchsperre",
                              [&sm] { return int(sm.get().system.bootButton); },
                              [&sm](int i) { sm.update([i](AppSettings& s) { s.system.bootButton = ButtonAction(i); }); }),
             MenuItem::number("Ruhezust. nach", 0, 240, 5, 0, " min", [&sm] { return float(sm.get().system.sleepAfterMin); },
@@ -362,6 +365,28 @@ void UIManager::menuSystem() {
 }
 
 // ---------------------------------------------------------------------------
+void UIManager::menuBattery() {
+    auto ps = [this] {
+        PowerStatus p;
+        app_->power.read(p);
+        return p;
+    };
+    menu_.open(
+        "Akku",
+        {
+            MenuItem::info("Ladestand", [ps] {
+                const PowerStatus p = ps();
+                return p.batteryPercent < 0 ? std::string("--") : fmt("ca. %.0f %%", double(p.batteryPercent));
+            }),
+            MenuItem::info("Zustand", [ps] { return std::string(chargeStateName(ps().charge)); }),
+            MenuItem::info("Spannung", [ps] { return fmt("%.2f V", double(ps().batteryV)); }),
+            MenuItem::info("Trend", [ps] { return fmt("%+.1f mV/min", double(ps().trendMvPerMin)); }),
+            MenuItem::info("USB am PC", [ps] { return std::string(ps().usbHost ? "ja" : "nein"); }),
+            MenuItem::info("Hinweis", [] { return std::string("Schätzung ±10-20%"); }),
+        },
+        [this] { menuSystem(); });
+}
+
 std::string UIManager::profileOptions() {
     const ProfileSet ps = app_->profiles.all();
     std::string o;

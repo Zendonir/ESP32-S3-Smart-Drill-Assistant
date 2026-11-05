@@ -5,6 +5,17 @@
 
 namespace sda {
 
+const char* chargeStateName(ChargeState s) {
+    switch (s) {
+        case ChargeState::Unknown: return "unbekannt";
+        case ChargeState::Discharging: return "Akkubetrieb";
+        case ChargeState::Charging: return "lädt";
+        case ChargeState::Full: return "voll (USB)";
+        case ChargeState::NoBattery: return "kein Akku?";
+    }
+    return "?";
+}
+
 float BatteryModel::socFromVoltage(float v) {
     // Typical LiPo open circuit voltage curve (approximate, rest state).
     static const float table[][2] = {
@@ -20,6 +31,16 @@ float BatteryModel::socFromVoltage(float v) {
             return table[i][1] + t * (table[i + 1][1] - table[i][1]);
         }
     return 100.0f;
+}
+
+void BatteryModel::reset() {
+    init_ = false;
+    histN_ = 0;
+    histAccum_ = 0;
+    trendMvPerMin_ = 0;
+    shownPercent_ = -1;
+    charge_ = ChargeState::Unknown;
+    level_ = BatteryLevel::Unknown;
 }
 
 void BatteryModel::update(float volts, float dt) {
@@ -45,12 +66,57 @@ void BatteryModel::update(float volts, float dt) {
     } else {
         level_ = BatteryLevel::Ok;
     }
+
+    // voltage history for the trend (one value every 15 s)
+    histAccum_ += dt;
+    if (histN_ == 0 || histAccum_ >= kHistPeriod) {
+        histAccum_ = 0.0f;
+        if (histN_ < kHist) {
+            hist_[histN_++] = v_;
+        } else {
+            for (int i = 1; i < kHist; ++i) hist_[i - 1] = hist_[i];
+            hist_[kHist - 1] = v_;
+        }
+        if (histN_ >= 3) {
+            const float minutes = (histN_ - 1) * kHistPeriod / 60.0f;
+            trendMvPerMin_ = (hist_[histN_ - 1] - hist_[0]) * 1000.0f / minutes;
+        }
+    }
+    updateCharge();
+
+    // displayed percentage: 5 % steps, changes only when the estimate leaves the
+    // current step by more than 3 % (no flicker from load changes)
+    if (level_ == BatteryLevel::Unknown) {
+        shownPercent_ = -1;
+    } else {
+        const float soc = socFromVoltage(v_);
+        const int step = static_cast<int>(std::lround(soc / 5.0f) * 5);
+        if (shownPercent_ < 0 || std::fabs(soc - static_cast<float>(shownPercent_)) > 5.5f) shownPercent_ = step;
+    }
 }
 
-int BatteryModel::percentEstimate() const {
-    if (!init_ || level_ == BatteryLevel::Unknown) return -1;
-    const float soc = socFromVoltage(v_);
-    return static_cast<int>(std::lround(soc / 5.0f) * 5);
+void BatteryModel::updateCharge() {
+    if (level_ == BatteryLevel::Unknown) {
+        charge_ = ChargeState::NoBattery;
+        return;
+    }
+    if (level_ == BatteryLevel::External) {
+        charge_ = ChargeState::Full;  // supply above cell voltage: USB powered
+        return;
+    }
+    const bool history = histN_ >= 5;  // >= 1 minute
+    const bool rising = history && trendMvPerMin_ >= (charge_ == ChargeState::Charging ? 2.0f : 6.0f);
+    if (usbHost_) {
+        charge_ = v_ >= 4.15f && !rising ? ChargeState::Full : ChargeState::Charging;
+    } else if (rising) {
+        charge_ = ChargeState::Charging;
+    } else if (history) {
+        charge_ = ChargeState::Discharging;
+    } else {
+        charge_ = ChargeState::Unknown;
+    }
 }
+
+int BatteryModel::percentEstimate() const { return init_ ? shownPercent_ : -1; }
 
 }  // namespace sda

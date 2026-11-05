@@ -7,7 +7,7 @@ pio test -e native                # PlatformIO + Unity
 scripts/run_host_tests.sh         # g++ -Werror, AddressSanitizer + UBSan
 ```
 
-74 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
+77 Testfälle in 8 Suiten prüfen die hardwareunabhängige Bibliothek `lib/DrillCore`.
 Datengrundlage ist ein deterministischer synthetischer IMU-Generator
 (`test/support/SyntheticImu.h`) mit Rauschen, Bias, Skalen- und Offsetfehlern,
 Vibration und Sample-Verlust.
@@ -20,7 +20,7 @@ Vibration und Sample-Verlust.
 | `test_orientation` | Wasserwaage flach und Kante, relative Neigung, senkrechtes Ziel (2D, Richtung), waagerechtes Ziel (nur Elevation, Seite frei), 45° mit Hemisphärenwechsel, Winkelkorrektur, Richtungsziel seitlich, Fläche eingeschränkt vs. 3D, relativer Azimut, Winkelbezug (Vertikale = 90° − Horizontale, Nullpunkt oben/unten driftfrei mit beliebigem Azimut, über die Senkrechte ungültig, links/rechts nur mit 3D-Nullpunkt, Vorzeichen, senkrechte Bezugsachse ungültig) |
 | `test_detectors` | Stillstand nach Haltezeit, schnell/langsam, langsames Kriechen ist kein Stillstand, Vibrationsstufen mit Rückstufung, Accel-Vertrauen, Zeitschätzer (±3 % ODR, Überlauf, Verlust, Duplikat, Lücke), Fallback auf Host-Zeit, Werkzeugzustand |
 | `test_display` | Zielhysterese und Haltezeit, ungültig ist nie grün, automatische Skala, Randbegrenzung des Markers, One-Euro, Zahlenhysterese, Präzisionsstatistik, Drifterkennung, Ringpuffer |
-| `test_settings` | Defaults gültig, Reparatur ungültiger Werte (NaN, Bereich, Hostname, Passwortlänge, Achsabbildung), Idempotenz, Profilvalidierung, Akkumodell |
+| `test_settings` | Defaults gültig, Reparatur ungültiger Werte (NaN, Bereich, Hostname, Passwortlänge, Achsabbildung), Idempotenz, Profilvalidierung, Akkumodell, Ladeerkennung (Entladen, Laden ohne USB-Host, voll an USB, kein Akku), Prozent-Hysterese, Tastenlogik (kurz, doppelt, Halten mit Abbruch, Ausschalten nach 3 s, Ignorieren des Einschalt-Drucks) |
 | `test_pipeline` | Gesamtkette: statische Genauigkeit (< 0,05° synthetisch), schnelle Drehung, Vibration (keine grüne Freigabe, Orientierung bleibt), lange Vibration lässt σ wachsen, festhängende Daten ergeben Sensorfehler, Sample-Verlust-Flag, Gyro-Kalibrierung, Online-Bias, Präzisionsmessung, Referenzdrift, Montagekalibrierung |
 
 Die synthetischen Genauigkeiten belegen nur die **Korrektheit der Algorithmen**, nicht
@@ -67,6 +67,8 @@ Ergänzend:
   3. Eine Version C mit absichtlich ausgelöstem Selbsttestfehler einspielen (z. B.
      `app.boot.imu = false` erzwingen). Erwartung: Rollback auf B.
   4. Strom während des Uploads trennen. Erwartung: Das Gerät startet mit B.
+* **Ein/Aus**: 3 s halten schaltet aus. Bei 2 s loslassen bricht der Countdown ab. Kurz drücken im Aus-Zustand: Das Gerät bleibt aus. 1 s halten: Es startet. Den Ruhestrom im Aus-Zustand messen.
+* **Ladestand**: Akkuspannung mit einem Multimeter gegenprüfen. Ladegerät und PC anstecken bzw. abziehen und beobachten, wie die Anzeige „lädt“/„voll“ wechselt.
 * **Energie**: Dimmen, Display aus, Deep-Sleep und Aufwachen mit BOOT. Stromaufnahme in
   jedem Zustand mit einem USB-Messgerät dokumentieren.
 
@@ -93,6 +95,6 @@ Messungen nicht**. Mit den Messungen lassen sich die Modellparameter überprüfe
 
 * Firmware-Build (`sda_s3_touch_128`): erfolgreich mit PlatformIO 6.1, espressif32 6.9.0
   und Arduino-ESP32 2.0.17.
-* Host-Tests: 74/74 bestanden.
+* Host-Tests: 77/77 bestanden.
 * **Hardwaretests 1–13: noch nicht durchgeführt.** Es lag keine Hardware vor. Ergebnisse
   bitte im Format der Tabelle oben unter `docs/results/` ablegen.

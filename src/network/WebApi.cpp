@@ -202,6 +202,10 @@ void WebApi::hStatus() {
     b["percentEstimate"] = p.batteryPercent;
     b["level"] = static_cast<int>(p.level);
     b["flashWritesAllowed"] = p.flashWritesAllowed;
+    b["chargeState"] = static_cast<int>(p.charge);
+    b["chargeStateName"] = chargeStateName(p.charge);
+    b["trendMvPerMin"] = p.trendMvPerMin;
+    b["usbHost"] = p.usbHost;
     JsonObject w = d["wifi"].to<JsonObject>();
     w["mode"] = static_cast<int>(n.mode);
     w["ip"] = n.ip;
@@ -733,7 +737,7 @@ void WebApi::broadcast() {
         "\"target\":%.2f,\"tol\":%.2f,\"val\":%.3f,\"tilt\":[%.3f,%.3f],\"acc\":[%.4f,%.4f,%.4f],"
         "\"gyr\":[%.3f,%.3f,%.3f],\"temp\":%.2f,\"vib\":%.1f,\"vl\":%d,\"motion\":%d,\"sig\":%.3f,"
         "\"hsig\":%.2f,\"rate\":%.1f,\"lost\":%lu,\"bat\":%.2f,\"pct\":%d,\"gcal\":%d,\"acal\":%d,"
-        "\"cal\":{\"p\":%d,\"pr\":%.2f,\"mask\":%d,\"det\":%d,\"act\":%d,\"seq\":%lu},\"fps\":%.0f}",
+        "\"chg\":%d,\"cal\":{\"p\":%d,\"pr\":%.2f,\"mask\":%d,\"det\":%d,\"act\":%d,\"seq\":%lu},\"fps\":%.0f}",
         static_cast<unsigned long>(millis()), int(u.mode), u.hold ? 1 : 0, int(s.quality.state),
         qualityStateShort(s.quality.state), double(u.devXDeg), double(u.devYDeg), double(u.devTotalDeg),
         int(u.targetState), double(u.targetAngleDeg), double(u.toleranceDeg), double(u.valueDeg),
@@ -742,7 +746,7 @@ void WebApi::broadcast() {
         double(std::isfinite(s.temperatureC) ? s.temperatureC : 0.0f), double(s.vibrationRmsMg), int(s.vibration),
         int(s.motion), double(s.tiltSigmaDeg), double(s.reference.info().headingSigmaDeg),
         double(s.timing.estimatedRateHz), static_cast<unsigned long>(s.timing.lostSamples), double(p.batteryV),
-        p.batteryPercent, s.hasGyroCal ? 1 : 0, s.hasAccelCal ? 1 : 0, int(s.cal.procedure),
+        p.batteryPercent, s.hasGyroCal ? 1 : 0, s.hasAccelCal ? 1 : 0, int(p.charge), int(s.cal.procedure),
         double(s.cal.progress), int(s.cal.acceptedPoseMask), int(s.cal.detectedPose), int(s.cal.activePose),
         static_cast<unsigned long>(s.cal.resultSeq), double(u.fps));
     if (n <= 0 || n >= int(sizeof(b))) return;

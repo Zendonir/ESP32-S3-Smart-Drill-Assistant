@@ -78,6 +78,7 @@ struct SystemSettings {
     bool mdns = true;
     uint16_t sleepAfterMin = 30;  ///< deep sleep after inactivity, 0 = never
     ButtonAction bootButton = ButtonAction::Hold;
+    bool powerOnHold = true;      ///< switching on requires holding BOOT for 1 s
     AxisMap axisMap;              ///< sensor -> device axis mapping
     uint8_t logLevel = 2;         ///< 0 error .. 3 debug
     float batteryDividerFactor = 3.0f;

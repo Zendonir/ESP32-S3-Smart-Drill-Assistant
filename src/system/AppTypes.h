@@ -31,7 +31,8 @@ struct UiStatus {
 struct UiCommand {
     enum class Type : uint8_t {
         SetMode, ToggleHold, Zero, ReloadProfile, ReloadSettings, Wake, DisplayDim, DisplayOff,
-        ButtonShort, ButtonLong, ShowMessage, BatteryWarning, SetTarget, PrepareSleep,
+        ButtonShort, ButtonDouble, PowerHold, PowerHoldCancel, ShowMessage, BatteryWarning, SetTarget,
+        PrepareSleep, ChargeChanged,
     } type;
     int32_t i = 0;
     float f = 0;

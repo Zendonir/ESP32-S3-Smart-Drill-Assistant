@@ -2,6 +2,8 @@
 #include "SystemTask.h"
 
 #include <Arduino.h>
+#include <HWCDC.h>
+#include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include <esp_heap_caps.h>
 #include <esp_sleep.h>
@@ -43,11 +45,29 @@ struct State {
 State g;
 
 void handleButton(AppContext& app, uint32_t now) {
-    const BootButton::Event ev = app.button.poll(now);
-    if (ev == BootButton::Event::None) return;
-    g.lastActivityMs = now;
+    using E = BootButton::Event;
+    static uint32_t lastProgressMs = 0;
+    const E ev = app.button.poll(now);
     UiCommand c{};
-    c.type = ev == BootButton::Event::Short ? UiCommand::Type::ButtonShort : UiCommand::Type::ButtonLong;
+    // power-off countdown: progress updates while the button is held
+    if (app.button.powerOffProgress(now) > 0.0f && now - lastProgressMs >= 100) {
+        lastProgressMs = now;
+        c.type = UiCommand::Type::PowerHold;
+        c.f = app.button.powerOffProgress(now);
+        app.postUi(c);
+    }
+    if (ev == E::None) return;
+    g.lastActivityMs = now;
+    switch (ev) {
+        case E::Short: c.type = UiCommand::Type::ButtonShort; break;
+        case E::Double: c.type = UiCommand::Type::ButtonDouble; break;
+        case E::HoldStart: c.type = UiCommand::Type::PowerHold; c.f = 0.0f; break;
+        case E::HoldCancel: c.type = UiCommand::Type::PowerHoldCancel; break;
+        case E::PowerOff:
+            LOGI(TAG, "BOOT held -> power off");
+            enterDeepSleep(app);  // does not return
+        default: return;
+    }
     app.postUi(c);
 }
 
@@ -92,12 +112,25 @@ void handleDisplayPower(AppContext& app, const sda::AppSettings& s, uint32_t now
 
 void handleBattery(AppContext& app, const sda::AppSettings& s, uint32_t now, PowerStatus& ps) {
     app.battery.setDivider(s.system.batteryDividerFactor);
+    app.battery.setUsbHost(HWCDC::isConnected());
     app.battery.update(0.5f);
     const sda::BatteryModel& m = app.battery.model();
     ps.batteryV = m.voltage();
     ps.batteryPercent = m.percentEstimate();
     ps.level = m.level();
+    const sda::ChargeState oldCharge = ps.charge;
+    ps.charge = m.chargeState();
+    ps.trendMvPerMin = m.trendMvPerMin();
+    ps.usbHost = m.usbHost();
+    if (ps.charge != oldCharge && (ps.charge == sda::ChargeState::Charging || ps.charge == sda::ChargeState::Full ||
+                                   oldCharge == sda::ChargeState::Charging)) {
+        UiCommand cc{};
+        cc.type = UiCommand::Type::ChargeChanged;
+        cc.i = static_cast<int32_t>(ps.charge);
+        app.postUi(cc);
+    }
     const bool critical = m.level() == sda::BatteryLevel::Critical;
+    const bool charging = m.chargeState() == sda::ChargeState::Charging;
     write_guard::set(!critical);
     ps.flashWritesAllowed = !critical;
     const uint8_t warn = critical ? 2 : (m.level() == sda::BatteryLevel::Low ? 1 : 0);
@@ -112,7 +145,7 @@ void handleBattery(AppContext& app, const sda::AppSettings& s, uint32_t now, Pow
         }
     }
     // shut down after 30 s of critical voltage to protect the cell and the flash
-    if (critical) {
+    if (critical && !charging) {  // never shut down while a charger is connected
         if (!g.criticalSinceMs) g.criticalSinceMs = now;
         if (now - g.criticalSinceMs > 30000) {
             LOGE(TAG, "battery critical for 30 s -> deep sleep");
@@ -171,20 +204,41 @@ void enterDeepSleep(AppContext& app) {
     // 1. persist pending changes (unless the battery is critical)
     app.settings.tick(millis(), true);
     app.profiles.tick(millis(), true);
-    // 2. let the UI switch the display off (it owns the SPI bus)
+    // 2. let the UI show the "off" screen and switch the display off (it owns the SPI bus)
     UiCommand c{};
     c.type = UiCommand::Type::PrepareSleep;
     app.postUi(c);
-    vTaskDelay(pdMS_TO_TICKS(300));
+    vTaskDelay(pdMS_TO_TICKS(1200));
     // 3. sensors to low power
     app.meas.suspend();
     app.touch.sleep();
-    // 4. wake-up source: BOOT button (GPIO0, RTC capable, active low)
+    LOGI(TAG, "entering deep sleep (wake: BOOT button)");
+    vTaskDelay(pdMS_TO_TICKS(50));
+    Serial.flush();
+    sleepNow();
+}
+
+void releaseSleepHolds() {
+    // undo the pin holds of a previous deep sleep (backlight would stay off otherwise)
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis(static_cast<gpio_num_t>(board::kLcdBacklight));
+}
+
+void sleepNow() {
+    // the button must be released first: ext0 wakes on LOW level and would
+    // otherwise restart the device immediately
+    pinMode(board::kBootButton, INPUT_PULLUP);
+    const uint32_t t0 = millis();
+    while (digitalRead(board::kBootButton) == LOW && millis() - t0 < 15000) delay(10);
+    delay(50);
+    // keep the backlight driver switched off during sleep (pin would float)
+    pinMode(board::kLcdBacklight, OUTPUT);
+    digitalWrite(board::kLcdBacklight, LOW);
+    gpio_hold_en(static_cast<gpio_num_t>(board::kLcdBacklight));
+    gpio_deep_sleep_hold_en();
+    // wake-up source: BOOT button (GPIO0, RTC capable, active low)
     rtc_gpio_pullup_en(static_cast<gpio_num_t>(board::kBootButton));
     esp_sleep_enable_ext0_wakeup(static_cast<gpio_num_t>(board::kBootButton), 0);
-    LOGI(TAG, "entering deep sleep (wake: BOOT button)");
-    vTaskDelay(pdMS_TO_TICKS(100));
-    Serial.flush();
     esp_deep_sleep_start();
 }
 

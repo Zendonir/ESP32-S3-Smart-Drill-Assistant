@@ -104,6 +104,7 @@ void settingsToJson(const AppSettings& s, JsonObject o, bool secrets) {
     y["mdns"] = s.system.mdns;
     y["sleepAfterMin"] = s.system.sleepAfterMin;
     y["bootButton"] = static_cast<int>(s.system.bootButton);
+    y["powerOnHold"] = s.system.powerOnHold;
     char axis[8];
     s.system.axisMap.format(axis);
     y["axisMap"] = axis;
@@ -168,6 +169,7 @@ bool settingsFromJson(JsonObjectConst o, AppSettings& out) {
         ok &= getBool(y, "mdns", s.system.mdns);
         ok &= getNum(y, "sleepAfterMin", s.system.sleepAfterMin);
         ok &= getEnum(y, "bootButton", s.system.bootButton);
+        ok &= getBool(y, "powerOnHold", s.system.powerOnHold);
         JsonVariantConst ax = y["axisMap"];
         if (!ax.isNull()) {
             AxisMap am;

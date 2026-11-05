@@ -83,6 +83,15 @@ private:
     void buttonAction(sda::ButtonAction a);
     void wakeDisplay();
     void checkStartupGyro();
+    // power button feedback (drawn on the top layer, above every screen)
+    lv_obj_t* powerOverlay_ = nullptr;
+    lv_obj_t* powerArc_ = nullptr;
+    uint32_t sleepAtMs_ = 0;
+    void showPowerHold(float progress);
+    void hidePowerOverlay();
+    void showGoodbye();
+    std::string batteryText(bool longForm);
+    void menuBattery();
 
     // main screen events
     static void mainEvent(lv_event_t* e);

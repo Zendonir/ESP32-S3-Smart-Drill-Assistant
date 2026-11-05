@@ -109,7 +109,7 @@ function connect(t){ws=new WebSocket(`ws://${location.hostname}:${t.port}/?t=${t
  ws.onclose=()=>setTimeout(()=>api('GET','/api/token').then(connect).catch(()=>{}),2000)}
 const f=(v,d=2)=>v===undefined||v===null?'--':(+v).toFixed(d);
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v)}
-function render(){const L=live;$('hq').textContent=L.qn;$('hb').textContent=(L.pct>=0?'ca. '+L.pct+'% ':'')+f(L.bat)+' V';
+function render(){const L=live;$('hq').textContent=L.qn;$('hb').textContent=(L.chg==2?'⚡ lädt · ':L.chg==3?'USB · voll · ':'')+(L.pct>=0?'ca. '+L.pct+'% ':'')+f(L.bat)+' V';
  if(document.activeElement!=$('mode'))$('mode').value=L.mode;
  $('lv').textContent=(L.mode==2||L.mode==5?f(L.val,2):f(L.dev[2],2))+'°';$('lv').style.color=css(TSC[L.ts]);
  $('lxy').textContent=`X ${f(L.dev[0])}°  Y ${f(L.dev[1])}°  ${TS[L.ts]}${L.hold?'  HOLD':''}`;
@@ -138,7 +138,7 @@ const LABELS={filterStrength:['Filterstärke',[0,1,2,3,4]],fusion:['Sensorfusion
  offAfterSec:['Display aus nach [s] (0=nie)'],rotation:['Displayrotation',['0°','90°','180°','270°']],theme:['Design',['Dunkel','Hoher Kontrast']],colorMode:['Farbmodus',['Standard','Farbenblind']],
  largeFont:['Schriftgröße',['Normal','Groß']],decimals:['Nachkommastellen',{'1':'1','2':'2'}],touchLockAuto:['Touchsperre bei Vibration'],showHistory:['Verlauf anzeigen'],
  historyWindowSec:['Verlaufsfenster',{'5':'5 s','15':'15 s','30':'30 s'}],wifiMode:['WLAN-Modus',['Aus','Access Point','Client']],ssid:['WLAN SSID'],password:['WLAN Passwort (leer = unverändert)'],
- hostname:['Hostname (mDNS)'],mdns:['mDNS'],sleepAfterMin:['Ruhezustand nach [min] (0=nie)'],bootButton:['BOOT-Taste',['Hold','Nullpunkt','Nächster Modus','Touchsperre']],axisMap:['Achszuordnung Sensor→Gerät'],
+ hostname:['Hostname (mDNS)'],mdns:['mDNS'],sleepAfterMin:['Ruhezustand nach [min] (0=nie)'],bootButton:['BOOT kurz drücken',['Hold','Nullpunkt','Nächster Modus','Touchsperre']],powerOnHold:['Einschalten: BOOT 1 s halten'],axisMap:['Achszuordnung Sensor→Gerät'],
  logLevel:['Log-Level',['Fehler','Warnung','Info','Debug']],batteryDividerFactor:['Akku-Spannungsteiler'],lowBatteryV:['Akku-Warnung [V]'],criticalBatteryV:['Akku kritisch [V]'],liveRateHz:['Live-Datenrate [Hz]']};
 const SKIP=['version','activeProfile','passwordSet'];
 async function loadCfg(){cfg=await api('GET','/api/config');let h='';for(const g of ['measurement','display','system']){h+=`<h3>${{measurement:'Messung',display:'Anzeige',system:'System'}[g]}</h3>`;
@@ -174,7 +174,7 @@ async function accel(a){const b={action:a};if(a=='start')b.extended=$('ext').che
 // ---- system
 async function loadSys(){const s=await api('GET','/api/status');$('sys').innerHTML=row('Firmware',s.firmware+' ('+s.partition+(s.imageConfirmed?'':', unbestätigt')+')')+row('Build',s.build)+row('Board',s.board)+
  row('Laufzeit',s.uptimeS+' s')+row('Heap frei / min',(s.freeHeap/1024|0)+' / '+(s.minFreeHeap/1024|0)+' kB')+row('PSRAM frei',(s.freePsram/1024|0)+' kB')+row('CPU (Schätzung)',s.cpuLoadEstimatePct.map(v=>f(v,0)+'%').join(' / '))+
- row('Akku',f(s.battery.voltage)+' V'+(s.battery.percentEstimate>=0?' (ca. '+s.battery.percentEstimate+'%)':''))+row('WLAN',['Aus','AP','Client'][s.wifi.mode]+' '+s.wifi.ip+' '+s.wifi.ssid)+
+ row('Akku',f(s.battery.voltage)+' V'+(s.battery.percentEstimate>=0?' (ca. '+s.battery.percentEstimate+'%)':'')+' · '+s.battery.chargeStateName)+row('WLAN',['Aus','AP','Client'][s.wifi.mode]+' '+s.wifi.ip+' '+s.wifi.ssid)+
  row('Selbsttest',['imu','touch','display','fs','calibrationLoaded'].map(k=>k+':'+(s.selfTest[k]?'ok':'–')).join(' '))}
 async function loadLog(){const r=await fetch('/api/log',{headers:{'Authorization':'Basic '+AUTH}});$('log').textContent=await r.text()}
 function upload(){const file=$('fw').files[0];if(!file)return;const fd=new FormData();fd.append('firmware',file,file.name);const x=new XMLHttpRequest();

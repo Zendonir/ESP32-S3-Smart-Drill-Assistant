@@ -1,21 +1,22 @@
 // SPDX-License-Identifier: MIT
-// BOOT button (GPIO0, active low) with debouncing and short/long press detection.
+// BOOT button (GPIO0, active low) = operating and on/off button.
+// Press classification: sda::ButtonLogic (unit tested).
 #pragma once
 
 #include <cstdint>
 
+#include "ButtonLogic.h"
+
 class BootButton {
 public:
-    enum class Event : uint8_t { None, Short, Long };
+    using Event = sda::ButtonLogic::Event;
     void begin();
     /// Call every ~10 ms.
     Event poll(uint32_t nowMs);
-    bool pressed() const { return stable_; }
+    bool pressed() const { return logic_.pressed(); }
+    float powerOffProgress(uint32_t nowMs) const { return logic_.powerOffProgress(nowMs); }
+    static bool rawPressed();
 
 private:
-    bool stable_ = false;
-    bool raw_ = false;
-    uint32_t changeMs_ = 0;
-    uint32_t downMs_ = 0;
-    bool longFired_ = false;
+    sda::ButtonLogic logic_;
 };

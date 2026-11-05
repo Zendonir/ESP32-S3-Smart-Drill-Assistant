@@ -98,6 +98,11 @@ void UIManager::task() {
         if (app_->profiles.version() != profilesVersion_) applyProfile();
 
         const uint32_t now = millis();
+        if (sleepAtMs_ && now >= sleepAtMs_) {
+            sleepAtMs_ = 0;
+            app_->display.sleep();
+            displayOff_ = true;
+        }
         const float dt = clampv(static_cast<float>(now - lastMs) * 0.001f, 0.001f, 0.2f);
         lastMs = now;
         app_->meas.snapshot(snap_);
@@ -167,9 +172,18 @@ void UIManager::handleCommand(const UiCommand& c) {
             }
             buttonAction(settings_.system.bootButton);
             break;
-        case T::ButtonLong:
+        case T::ButtonDouble:
             wakeDisplay();
             setTouchLock(!touchLocked_);
+            break;
+        case T::PowerHold:
+            wakeDisplay();
+            showPowerHold(c.f);
+            break;
+        case T::PowerHoldCancel: hidePowerOverlay(); break;
+        case T::ChargeChanged:
+            wakeDisplay();
+            showMessage(batteryText(true).c_str(), 2500);
             break;
         case T::ShowMessage: showMessage(c.text); break;
         case T::BatteryWarning:
@@ -180,8 +194,10 @@ void UIManager::handleCommand(const UiCommand& c) {
             app_->profiles.update(settings_.system.activeProfile, [&](Profile& p) { p.targetAngleDeg = c.f; });
             break;
         case T::PrepareSleep:
-            app_->display.sleep();
-            displayOff_ = true;
+            // "off" screen with the charge level, then display off
+            wakeDisplay();
+            showGoodbye();
+            sleepAtMs_ = millis() + 900;
             break;
     }
 }
@@ -208,7 +224,83 @@ void UIManager::checkStartupGyro() {
     }
 }
 
+std::string UIManager::batteryText(bool longForm) {
+    PowerStatus p;
+    app_->power.read(p);
+    char b[64];
+    if (p.charge == ChargeState::NoBattery || p.batteryPercent < 0) {
+        snprintf(b, sizeof(b), "Kein Akku erkannt%s", p.usbHost ? " (USB)" : "");
+    } else if (p.charge == ChargeState::Charging) {
+        snprintf(b, sizeof(b), "%s Akku ca. %d %%%s", LV_SYMBOL_CHARGE, p.batteryPercent, longForm ? "\nlädt" : "");
+    } else if (p.charge == ChargeState::Full) {
+        snprintf(b, sizeof(b), "%s Akku voll (USB)", LV_SYMBOL_BATTERY_FULL);
+    } else {
+        snprintf(b, sizeof(b), "Akku ca. %d %%%s", p.batteryPercent, longForm ? "\nAkkubetrieb" : "");
+    }
+    return b;
+}
+
+void UIManager::showPowerHold(float progress) {
+    if (!powerOverlay_) {
+        const theme::Palette& p = theme::pal();
+        powerOverlay_ = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(powerOverlay_);
+        lv_obj_set_size(powerOverlay_, 240, 240);
+        lv_obj_set_style_bg_color(powerOverlay_, lv_color_hex(0x000000), 0);
+        lv_obj_set_style_bg_opa(powerOverlay_, LV_OPA_90, 0);
+        lv_obj_clear_flag(powerOverlay_, LV_OBJ_FLAG_SCROLLABLE);
+        powerArc_ = lv_arc_create(powerOverlay_);
+        lv_obj_set_size(powerArc_, 220, 220);
+        lv_obj_center(powerArc_);
+        lv_arc_set_rotation(powerArc_, 270);
+        lv_arc_set_bg_angles(powerArc_, 0, 360);
+        lv_arc_set_range(powerArc_, 0, 100);
+        lv_obj_remove_style(powerArc_, nullptr, LV_PART_KNOB);
+        lv_obj_clear_flag(powerArc_, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_style_arc_width(powerArc_, 8, LV_PART_MAIN);
+        lv_obj_set_style_arc_width(powerArc_, 8, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(powerArc_, p.grid, LV_PART_MAIN);
+        lv_obj_set_style_arc_color(powerArc_, p.far, LV_PART_INDICATOR);
+        lv_obj_t* sym = theme::label(powerOverlay_, theme::large(), p.fg, LV_SYMBOL_POWER);
+        lv_obj_align(sym, LV_ALIGN_CENTER, 0, -36);
+        lv_obj_t* t = theme::label(powerOverlay_, theme::medium(), p.fg, "Ausschalten ...");
+        lv_obj_align(t, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_t* h = theme::label(powerOverlay_, theme::small(), p.dim, "Loslassen = abbrechen");
+        lv_obj_align(h, LV_ALIGN_CENTER, 0, 28);
+        lv_obj_t* bat = theme::label(powerOverlay_, theme::small(), p.dim, batteryText(false).c_str());
+        lv_obj_align(bat, LV_ALIGN_CENTER, 0, 52);
+    }
+    lv_arc_set_value(powerArc_, static_cast<int16_t>(progress * 100));
+}
+
+void UIManager::hidePowerOverlay() {
+    if (powerOverlay_) lv_obj_del(powerOverlay_);
+    powerOverlay_ = nullptr;
+    powerArc_ = nullptr;
+}
+
+void UIManager::showGoodbye() {
+    hidePowerOverlay();
+    showPowerHold(1.0f);  // reuse the overlay layout, then replace the texts
+    lv_obj_clean(powerOverlay_);
+    const theme::Palette& p = theme::pal();
+    lv_obj_t* sym = theme::label(powerOverlay_, theme::large(), p.dim, LV_SYMBOL_POWER);
+    lv_obj_align(sym, LV_ALIGN_CENTER, 0, -50);
+    lv_obj_t* t = theme::label(powerOverlay_, theme::large(), p.fg, "Aus");
+    lv_obj_align(t, LV_ALIGN_CENTER, 0, -14);
+    lv_obj_t* bat = theme::label(powerOverlay_, theme::medium(), p.fg, batteryText(false).c_str());
+    lv_obj_align(bat, LV_ALIGN_CENTER, 0, 20);
+    lv_obj_t* h = theme::label(powerOverlay_, theme::small(), p.dim,
+                               settings_.system.powerOnHold ? "Ein: BOOT 1 s halten" : "Ein: BOOT drücken");
+    lv_obj_align(h, LV_ALIGN_CENTER, 0, 50);
+    powerArc_ = nullptr;
+}
+
 void UIManager::wakeDisplay() {
+    if (displayOff_ && !sleepAtMs_) {
+        // display was off: show the charge level briefly after waking up
+        if (view_ == View::Main) main_.showToast(batteryText(true).c_str(), 1500);
+    }
     if (displayOff_) {
         app_->display.wake();
         displayOff_ = false;

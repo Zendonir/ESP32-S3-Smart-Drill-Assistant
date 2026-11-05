@@ -9,6 +9,7 @@
 //   core 1: imu (20), fusion (19), ui (5)
 //   core 0: WiFi stack, network (3), system (2), log (1)
 #include <Arduino.h>
+#include <esp_sleep.h>
 #include <esp_system.h>
 #include <lvgl.h>
 
@@ -33,6 +34,7 @@ NetworkManager g_net(g_app);
 
 void setup() {
     AppContext& app = g_app;
+    system_task::releaseSleepHolds();
     sda_log::begin(sda_log::Level::Info);
     sda_log::startTask(appcfg::kLogTaskCore, appcfg::kLogTaskPrio, appcfg::kLogTaskStack);
     app.boot.resetReason = static_cast<int>(esp_reset_reason());
@@ -45,6 +47,20 @@ void setup() {
     // settings first: display rotation/brightness, axis mapping, log level
     app.settings.begin();
     sda::AppSettings s = app.settings.get();
+
+    // Power-on via BOOT: after waking from deep sleep the button must be held for
+    // 1 s (setting), so that an accidental touch in the toolbox does not switch
+    // the device on and drain the battery.
+    if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0 && s.system.powerOnHold) {
+        pinMode(board::kBootButton, INPUT_PULLUP);
+        const uint32_t t0 = millis();
+        while (digitalRead(board::kBootButton) == LOW && millis() - t0 < 1000) delay(10);
+        if (millis() - t0 < 1000) {
+            LOGI(TAG, "BOOT released too early -> back to sleep");
+            delay(20);
+            system_task::sleepNow();
+        }
+    }
     app.boot.settingsLoaded = app.settings.loadedFromFlash();
     sda_log::setLevel(static_cast<sda_log::Level>(s.system.logLevel));
 
@@ -76,6 +92,13 @@ void setup() {
 
     // battery before the measurement tasks (first reading for the warning logic)
     app.battery.begin(s.system.batteryDividerFactor, s.system.lowBatteryV, s.system.criticalBatteryV);
+    {
+        char b[40];
+        const int pct = app.battery.model().percentEstimate();
+        if (pct >= 0) snprintf(b, sizeof(b), "Akku ca. %d %%", pct);
+        else snprintf(b, sizeof(b), "Akku: --");
+        g_ui.bootStep(b, pct < 0 || pct > 10);
+    }
 
     // measurement tasks
     s = app.settings.get();

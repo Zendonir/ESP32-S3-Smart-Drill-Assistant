@@ -23,6 +23,9 @@ struct PowerStatus {
     float batteryV = 0;
     int batteryPercent = -1;     ///< estimate, -1 unknown
     sda::BatteryLevel level = sda::BatteryLevel::Unknown;
+    sda::ChargeState charge = sda::ChargeState::Unknown;
+    float trendMvPerMin = 0;
+    bool usbHost = false;
     bool flashWritesAllowed = true;
     uint32_t idleMs = 0;
     float cpuLoad[2] = {-1, -1};
