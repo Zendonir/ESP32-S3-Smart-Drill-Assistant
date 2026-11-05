@@ -410,6 +410,8 @@ void UIManager::showGoodbye() {
     lv_obj_t* h = theme::label(powerOverlay_, theme::small(), p.dim,
                                settings_.system.powerOnHold ? "Ein: BOOT 1 s halten" : "Ein: BOOT drücken");
     lv_obj_align(h, LV_ALIGN_CENTER, 0, 50);
+    lv_obj_t* u = theme::label(powerOverlay_, theme::small(), p.dim, "USB/Flashen nur eingeschaltet");
+    lv_obj_align(u, LV_ALIGN_CENTER, 0, 70);
     powerArc_ = nullptr;
 }
 

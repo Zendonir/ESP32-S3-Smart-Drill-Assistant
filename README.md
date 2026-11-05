@@ -72,6 +72,8 @@ Lokal: `pio run -e sda_s3_touch_128 && python3 scripts/build_flasher.py --out _s
 Ohne PlatformIO lassen sich die Tests mit `scripts/run_host_tests.sh` ausführen
 (g++ mit Address- und UB-Sanitizer).
 
+**Wichtig:** „Aus“ ist Tiefschlaf. Dabei ist auch der USB-Anschluss abgeschaltet, und der PC erkennt das Gerät nicht. Vor dem Flashen deshalb einschalten (BOOT 1 s halten).
+
 Falls der Upload nicht startet: **BOOT** gedrückt halten, **RESET** kurz drücken,
 **BOOT** loslassen (ROM-Bootloader), dann erneut hochladen.
 

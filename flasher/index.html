@@ -66,6 +66,7 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
   <section class="card">
     <h2>So geht's</h2>
     <ol>
+      <li>Gerät <b>einschalten</b> (BOOT 1 s halten). Im ausgeschalteten Zustand (Tiefschlaf) ist der USB-Anschluss aus, und der PC erkennt das Gerät nicht.</li>
       <li>Board per <b>USB-C-Datenkabel</b> anschließen (reine Ladekabel funktionieren nicht).</li>
       <li><b>Firmware installieren</b> klicken und den Port wählen, meist „USB JTAG/serial debug unit“ bzw. „ESP32-S3“.</li>
       <li>Bei der Frage <b>„Gerät löschen?“</b>:
@@ -81,6 +82,7 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
   <div class="grid">
     <section class="card">
       <h2>Wenn keine Verbindung zustande kommt</h2>
+      <p class="meta" style="margin-top:0">Erst prüfen, ob das Gerät eingeschaltet ist; „Aus“ ist Tiefschlaf ohne USB.</p>
       <ol>
         <li><b>BOOT</b> gedrückt halten, <b>RESET</b> kurz drücken, <b>BOOT</b> loslassen.</li>
         <li>Erneut installieren und den nun angezeigten Port wählen.</li>

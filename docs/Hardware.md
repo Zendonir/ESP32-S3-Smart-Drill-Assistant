@@ -110,6 +110,8 @@ Die ersten zwei Prüfungen nach dem Ausschalten zählen nicht, weil die Zellspan
 Der zusätzliche mittlere Strombedarf hängt von Boot-Dauer und Board-Ruhestrom ab und ist noch zu messen; grob sind es einige zehn µA.
 Ein Ladegerät, das bereits beim Ausschalten steckt, löst keinen Sprung aus. Für diesen Fall zeigt das Gerät beim Ausschalten direkt die Ladeanzeige.
 
+**USB im Aus-Zustand:** Im Tiefschlaf ist der USB-Serial/JTAG-Controller abgeschaltet, deshalb meldet sich das Gerät nicht am PC. Zum Flashen das Gerät einschalten oder BOOT+RESET (Download-Modus) verwenden. Wird das Gerät ausgeschaltet, während es bereits am USB hängt, bleibt es wach (Ladeanzeige), und USB bleibt erreichbar.
+
 **Ein/Aus-Taste.** Das Board hat keinen eigenen Einschalter, deshalb dient BOOT als Ein/Aus-Taste.
 „Aus“ ist Deep-Sleep, keine Trennung vom Akku.
 Vor dem Schlafen wartet die Firmware, bis die Taste losgelassen ist (sonst würde ext0 sofort wieder wecken).
