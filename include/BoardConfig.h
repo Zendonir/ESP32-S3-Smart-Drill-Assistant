@@ -59,9 +59,10 @@ constexpr int kBatteryAdc = 1;                // GPIO1 = ADC1_CH0
 constexpr float kBatteryDividerDefault = 3.0f;
 constexpr int kBootButton = 0;                // active low, external pull-up + RTC capable
 
-// Default mapping of QMI8658 sensor axes onto the device frame (X right, Y up,
-// Z out of the screen). Identity until verified on hardware with the axis check
-// in the diagnostics screen (docs/Hardware.md). Configurable in settings.
-constexpr const char* kDefaultAxisMap = "+X+Y+Z";
+// Mapping of QMI8658 sensor axes onto the device frame (X right, Y up, Z out of
+// the screen), determined on a real ESP32-S3-Touch-LCD-1.28 with the axis
+// detection wizard (Kalibrierung > Achsen erkennen). Other board revisions can
+// re-run the wizard; the result is stored in the settings.
+constexpr const char* kDefaultAxisMap = "-Y-X-Z";
 
 }  // namespace board

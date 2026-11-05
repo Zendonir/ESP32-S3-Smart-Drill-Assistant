@@ -252,7 +252,8 @@ void MenuScreen::openChoice(int idx) {
     roller_ = lv_roller_create(base);
     lv_roller_set_options(roller_, m.options.c_str(), LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(roller_, 3);
-    lv_obj_set_width(roller_, 170);
+    lv_obj_set_width(roller_, 184);
+    lv_obj_set_style_text_align(roller_, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(roller_, theme::medium(), 0);
     lv_obj_set_style_bg_color(roller_, lv_color_hex(0x101214), 0);
     lv_obj_set_style_text_color(roller_, theme::pal().fg, 0);

@@ -62,7 +62,8 @@ nicht gegengeprüft. Bitte vor dem ersten Einsatz die folgenden Punkte durchgehe
    * Grau 12 % muss deutlich dunkler sein als Grau 38 %.
 4. **Touch.** Diagnose › „Touch x/y“ zeigt die Koordinate unter dem Finger
    (oben links ≈ 0/0). Stimmt sie nicht, `kTouchSwapXY`/`kTouchInvertX/Y` anpassen.
-5. **IMU-Achsen.** Menü › Kalibrierung › **Achsen erkennen**:
+5. **IMU-Achsen.** Der Standard ist `-Y-X-Z`. Diese Zuordnung wurde an einem echten ESP32-S3-Touch-LCD-1.28 mit dem Achsen-Assistenten ermittelt.
+   Bei einer anderen Boardrevision oder wenn der Punkt in die falsche Richtung läuft, den Assistenten erneut ausführen: Menü › Kalibrierung › **Achsen erkennen**.
    1. Gerät mit dem Display nach oben flach hinlegen.
    2. Danach aufrecht hinstellen, sodass der Text auf dem Display lesbar ist.
 

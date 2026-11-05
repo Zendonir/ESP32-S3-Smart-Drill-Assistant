@@ -69,9 +69,9 @@ void UIManager::start() {
         bootList_ = nullptr;
     }
     if (!app_->boot.imu) main_.showToast("Sensor QMI8658 nicht gefunden!", 6000);
-    else if (!settings_.system.axisMapVerified)
-        main_.showToast("Erst einrichten:\nMenü > Kalibrierung >\nAchsen erkennen", 5000);
-    else if (!app_->boot.calibrationLoaded) main_.showToast("Sensor nicht kalibriert.\nMenü > Kalibrierung", 4000);
+    else if (!app_->boot.calibrationLoaded)
+        main_.showToast("Bitte kalibrieren:\nMenü > Kalibrierung", 4000);
+
     if (app_->boot.imu && settings_.measurement.startupGyroCal == StartupGyroCal::Always) {
         // mandatory start-up calibration with guidance on screen
         view_ = View::Calibration;
@@ -653,13 +653,16 @@ void UIManager::openPicker(int kind) {
     pickerRoller_ = lv_roller_create(picker_);
     lv_roller_set_options(pickerRoller_, opts.c_str(), LV_ROLLER_MODE_NORMAL);
     lv_roller_set_visible_row_count(pickerRoller_, 3);
-    lv_obj_set_width(pickerRoller_, 170);
-    lv_obj_set_style_text_font(pickerRoller_, kind == 5 ? theme::medium() : theme::large(), 0);
+    lv_obj_set_width(pickerRoller_, 184);
+    // short entries (angles, tolerances) large, texts in the medium font so that
+    // they fit the round panel
+    lv_obj_set_style_text_font(pickerRoller_, (kind == 1 || kind == 2) ? theme::large() : theme::medium(), 0);
     lv_obj_set_style_bg_color(pickerRoller_, lv_color_hex(0x101214), 0);
     lv_obj_set_style_text_color(pickerRoller_, p.fg, 0);
     lv_obj_set_style_bg_color(pickerRoller_, p.accent, LV_PART_SELECTED);
     lv_obj_set_style_text_color(pickerRoller_, lv_color_hex(0x000000), LV_PART_SELECTED);
-    lv_obj_align(pickerRoller_, LV_ALIGN_CENTER, 0, -8);
+    lv_obj_align(pickerRoller_, LV_ALIGN_CENTER, 0, -14);
+    lv_obj_set_style_text_align(pickerRoller_, LV_TEXT_ALIGN_CENTER, 0);
     lv_roller_set_selected(pickerRoller_, static_cast<uint16_t>(sel), LV_ANIM_OFF);
     auto mkBtn = [&](const char* sym, int x, bool ok) {
         lv_obj_t* b = lv_btn_create(picker_);

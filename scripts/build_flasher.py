@@ -5,8 +5,9 @@ Usage:
     pio run -e sda_s3_touch_128
     python3 scripts/build_flasher.py [--out _site] [--env sda_s3_touch_128]
 
-The output directory contains index.html, manifest.json, build-info.json and the
-binaries (bootloader, partition table, boot_app0, application). It can be served by
+The output directory contains index.html, latest.json, the ESP Web Tools bundle and
+builds/<commit>/ with manifest.json, build-info.json and the binaries
+(bootloader, partition table, boot_app0, application). It can be served by
 any HTTPS web server, e.g. GitHub Pages (see .github/workflows/pages.yml).
 
 Flash layout (ESP32-S3, matches partitions.csv):
@@ -118,14 +119,17 @@ def main():
             if f.read(1) != b"\xE9":
                 sys.exit(f"{name} is not a valid ESP32 image")
 
-    os.makedirs(args.out, exist_ok=True)
+    version = firmware_version()
+    commit = git_commit()
+    # Every build lives in its own immutable folder builds/<commit>/ (manifest +
+    # binaries + build info). Only latest.json changes; the page always fetches
+    # it uncached. Cached files can therefore never mix versions.
+    build_dir = os.path.join(args.out, "builds", commit)
+    os.makedirs(build_dir, exist_ok=True)
     shutil.copy(os.path.join(ROOT, "flasher", "index.html"), os.path.join(args.out, "index.html"))
     install_esp_web_tools(args.out, args.esp_web_tools_tgz)
     for name, src, _ in parts:
-        shutil.copy(src, os.path.join(args.out, name))
-
-    version = firmware_version()
-    commit = git_commit()
+        shutil.copy(src, os.path.join(build_dir, name))
     manifest = {
         "name": "Smart Drill Assistant",
         "version": f"{version} ({commit})",
@@ -137,7 +141,7 @@ def main():
         }],
     }
     del manifest["home_assistant_domain"]
-    with open(os.path.join(args.out, "manifest.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(build_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
     try:
@@ -154,8 +158,10 @@ def main():
         "parts": [{"path": name, "offset": f"0x{off:X}", "size": os.path.getsize(src), "sha256": sha256(src)}
                   for name, src, off in parts],
     }
-    with open(os.path.join(args.out, "build-info.json"), "w", encoding="utf-8") as f:
+    with open(os.path.join(build_dir, "build-info.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, indent=2)
+    with open(os.path.join(args.out, "latest.json"), "w", encoding="utf-8") as f:
+        json.dump({"version": version, "commit": commit, "path": f"builds/{commit}/"}, f)
     # GitHub Pages: serve files as they are (no Jekyll processing)
     open(os.path.join(args.out, ".nojekyll"), "w").close()
     print(f"flasher site written to {args.out} (version {version}, commit {commit})")

@@ -55,7 +55,7 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
         Version <b id="ver">–</b><br>
         Build <span id="build">–</span>
       </div>
-      <esp-web-install-button manifest="manifest.json">
+      <esp-web-install-button id="installer">
         <button slot="activate">Firmware installieren</button>
         <span slot="unsupported"><p class="notice">Dieser Browser unterstützt kein Web Serial. Bitte <b>Chrome</b> oder <b>Edge</b> am Desktop (Windows, macOS, Linux) verwenden. Smartphones und Firefox/Safari funktionieren nicht.</p></span>
         <span slot="not-allowed"><p class="notice">Web Serial ist nur über HTTPS oder localhost erlaubt.</p></span>
@@ -90,7 +90,7 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
     </section>
     <section class="card">
       <h2>Update ohne Kabel (OTA)</h2>
-      <p class="meta" style="margin-top:0">Läuft die Firmware bereits mit WLAN: <a id="fwlink" href="firmware.bin" download>firmware.bin</a> herunterladen, Weboberfläche des Geräts öffnen (<code>http://&lt;IP&gt;/</code>), anmelden und unter <b>System › Firmware-Update</b> hochladen. Startet das neue Image nicht sauber, kehrt das Gerät automatisch zur alten Firmware zurück.</p>
+      <p class="meta" style="margin-top:0">Läuft die Firmware bereits mit WLAN: <a id="fwlink" href="#" download="firmware.bin">firmware.bin</a> herunterladen, Weboberfläche des Geräts öffnen (<code>http://&lt;IP&gt;/</code>), anmelden und unter <b>System › Firmware-Update</b> hochladen. Startet das neue Image nicht sauber, kehrt das Gerät automatisch zur alten Firmware zurück.</p>
     </section>
   </div>
 
@@ -114,9 +114,15 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
   </footer>
 </main>
 <script>
-fetch('manifest.json').then(r => r.json()).then(m => {
-  document.getElementById('ver').textContent = m.version;
-  return fetch('build-info.json');
+// latest.json is always fetched fresh (bypasses browser and CDN cache); the
+// build folder it points to is immutable.
+let base = '';
+fetch('latest.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(l => {
+  base = l.path;
+  document.getElementById('installer').setAttribute('manifest', base + 'manifest.json');
+  document.getElementById('fwlink').href = base + 'firmware.bin';
+  document.getElementById('ver').textContent = `${l.version} (${l.commit})`;
+  return fetch(base + 'build-info.json');
 }).then(r => r.json()).then(b => {
   document.getElementById('build').textContent = `${b.date} · ${b.commit}`;
   const rows = b.parts.map(p => `<tr><td>${p.offset}</td><td>${p.path} · ${(p.size / 1024).toFixed(0)} KB<br><code>sha256 ${p.sha256}</code></td></tr>`).join('');
