@@ -1,0 +1,52 @@
+name: flasher-pages
+
+# Builds the firmware and publishes the browser flasher (ESP Web Tools) to
+# GitHub Pages. Repository setting required once:
+#   Settings > Pages > Build and deployment > Source: "GitHub Actions"
+
+on:
+  push:
+    branches: [claude/smart-drill-firmware, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      - name: Unit tests (host)
+        run: pio test -e native
+      - name: Build firmware
+        run: pio run -e sda_s3_touch_128
+      - name: Assemble flasher site
+        run: python3 scripts/build_flasher.py --out _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

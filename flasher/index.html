@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Drill Flasher</title>
+<meta name="description" content="Firmware des Smart Drill Assistant direkt aus dem Browser auf das Waveshare ESP32-S3-Touch-LCD-1.28 flashen.">
+<!-- ESP Web Tools 10.2.1, served from this site (copied by scripts/build_flasher.py) -->
+<script type="module" src="esp-web-tools/install-button.js"></script>
+<style>
+:root{--bg:#0d0f12;--card:#171a1f;--fg:#e8eaed;--dim:#8a9099;--acc:#4fc3f7;--ok:#2bd96b;--warn:#ffa000;--line:#2a3038;--code:#0a0c0e}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){--bg:#f4f6f8;--card:#ffffff;--fg:#1b1f24;--dim:#5b636d;--acc:#0277bd;--ok:#1e9e50;--warn:#b26a00;--line:#dde2e8;--code:#eef1f4}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 48px}
+header{display:flex;gap:20px;align-items:center;margin:8px 0 24px}
+.dial{flex:none;width:92px;height:92px;border-radius:50%;border:3px solid var(--line);position:relative;background:radial-gradient(circle,var(--card) 60%,var(--bg))}
+.dial::before,.dial::after{content:"";position:absolute;background:var(--line)}
+.dial::before{left:50%;top:10px;bottom:10px;width:2px;margin-left:-1px}
+.dial::after{top:50%;left:10px;right:10px;height:2px;margin-top:-1px}
+.dial span{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--ok);left:50%;top:50%;margin:-8px 0 0 -8px;box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 25%,transparent);z-index:1}
+h1{font-size:28px;line-height:1.2;margin:0 0 4px}
+.sub{color:var(--dim);margin:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
+.install{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.meta{color:var(--dim);font-size:14px}
+.meta b{color:var(--fg);font-weight:600}
+esp-web-install-button button[slot="activate"]{font:600 17px system-ui,sans-serif;background:var(--acc);color:#000;border:0;border-radius:10px;padding:12px 22px;cursor:pointer}
+.notice{border-left:4px solid var(--warn);padding:10px 14px;background:color-mix(in srgb,var(--warn) 10%,transparent);border-radius:6px;margin:0}
+ol{padding-left:22px;margin:0}li{margin:6px 0}
+h2{font-size:19px;margin:0 0 12px}
+code{background:var(--code);padding:1px 6px;border-radius:5px;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+td:first-child{color:var(--dim);white-space:nowrap;padding-right:12px}
+a{color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px}
+.grid .card{margin:0}
+footer{color:var(--dim);font-size:13px;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="dial" aria-hidden="true"><span></span></div>
+    <div>
+      <h1>Smart Drill Assistant</h1>
+      <p class="sub">Firmware direkt aus dem Browser flashen · Waveshare ESP32-S3-Touch-LCD-1.28</p>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="install">
+      <div class="meta">
+        Version <b id="ver">–</b><br>
+        Build <span id="build">–</span>
+      </div>
+      <esp-web-install-button manifest="manifest.json">
+        <button slot="activate">Firmware installieren</button>
+        <span slot="unsupported"><p class="notice">Dieser Browser unterstützt kein Web Serial. Bitte <b>Chrome</b> oder <b>Edge</b> am Desktop (Windows, macOS, Linux) verwenden. Smartphones und Firefox/Safari funktionieren nicht.</p></span>
+        <span slot="not-allowed"><p class="notice">Web Serial ist nur über HTTPS oder localhost erlaubt.</p></span>
+      </esp-web-install-button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>So geht's</h2>
+    <ol>
+      <li>Board per <b>USB-C-Datenkabel</b> anschließen (reine Ladekabel funktionieren nicht).</li>
+      <li><b>Firmware installieren</b> klicken und den Port wählen, meist „USB JTAG/serial debug unit“ bzw. „ESP32-S3“.</li>
+      <li>Bei der Frage <b>„Gerät löschen?“</b>:
+        <ul>
+          <li><b>Nein</b> bei einem Update: Einstellungen, Profile und Sensorkalibrierung bleiben erhalten.</li>
+          <li><b>Ja</b> bei der Erstinstallation oder bei Problemen: Danach musst du neu kalibrieren.</li>
+        </ul>
+      </li>
+      <li>Nach dem Flashen startet das Gerät neu. Danach im Menü kalibrieren: Gyroskop → Sensor 6 Lagen → Montage.</li>
+    </ol>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Wenn keine Verbindung zustande kommt</h2>
+      <ol>
+        <li><b>BOOT</b> gedrückt halten, <b>RESET</b> kurz drücken, <b>BOOT</b> loslassen.</li>
+        <li>Erneut installieren und den nun angezeigten Port wählen.</li>
+        <li>Nach dem Flashen einmal <b>RESET</b> drücken.</li>
+      </ol>
+      <p class="meta">Andere Programme, die den Port belegen (Arduino IDE, serieller Monitor), vorher schließen.</p>
+    </section>
+    <section class="card">
+      <h2>Update ohne Kabel (OTA)</h2>
+      <p class="meta" style="margin-top:0">Läuft die Firmware bereits mit WLAN: <a id="fwlink" href="firmware.bin" download>firmware.bin</a> herunterladen, Weboberfläche des Geräts öffnen (<code>http://&lt;IP&gt;/</code>), anmelden und unter <b>System › Firmware-Update</b> hochladen. Startet das neue Image nicht sauber, kehrt das Gerät automatisch zur alten Firmware zurück.</p>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Inhalt dieses Builds</h2>
+    <table id="parts"><tr><td>Dateien</td><td>werden geladen …</td></tr></table>
+  </section>
+
+  <section class="card">
+    <p class="notice">Die Firmware ist noch nicht auf echter Hardware validiert. Prüfe nach dem ersten Start die Checkliste in <a href="https://github.com/Zendonir/ESP32-S3-Smart-Drill-Assistant/blob/claude/smart-drill-firmware/docs/Hardware.md">docs/Hardware.md</a> (Display, Touch, Sensorachsen, Akku). Nur für das <b>Touch</b>-Board (ESP32-S3-Touch-LCD-1.28) gedacht, nicht für die Variante ohne Touch.</p>
+  </section>
+
+  <footer>
+    Flashen über <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a> (Web Serial). Es werden keine Daten an einen Server übertragen; die Firmware wird lokal im Browser auf das Gerät geschrieben.
+    · <a href="https://github.com/Zendonir/ESP32-S3-Smart-Drill-Assistant">Quellcode</a>
+  </footer>
+</main>
+<script>
+fetch('manifest.json').then(r => r.json()).then(m => {
+  document.getElementById('ver').textContent = m.version;
+  return fetch('build-info.json');
+}).then(r => r.json()).then(b => {
+  document.getElementById('build').textContent = `${b.date} · ${b.commit}`;
+  const rows = b.parts.map(p => `<tr><td>${p.offset}</td><td>${p.path} · ${(p.size / 1024).toFixed(0)} KB<br><code>sha256 ${p.sha256}</code></td></tr>`).join('');
+  document.getElementById('parts').innerHTML = rows;
+}).catch(() => {
+  document.getElementById('parts').innerHTML = '<tr><td>Hinweis</td><td>Build-Informationen nicht gefunden. Wurde die Seite mit scripts/build_flasher.py erzeugt?</td></tr>';
+});
+</script>
+</body>
+</html>

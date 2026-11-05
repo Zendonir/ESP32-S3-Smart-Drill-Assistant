@@ -59,6 +59,16 @@ pio device monitor -b 115200                # Log über USB-Serial (CDC)
 pio test -e native                          # Unit-Tests auf dem PC
 ```
 
+### Flashen im Browser (ohne Installation)
+
+Die Flash-Seite unter `https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/` (GitHub Pages) flasht die aktuelle Firmware direkt aus **Chrome oder Edge am Desktop** per Web Serial über [ESP Web Tools](https://esphome.github.io/esp-web-tools/).
+Board per USB-C anschließen, „Firmware installieren“ klicken, Port wählen.
+Bei der Frage „Gerät löschen?“ bleiben mit **Nein** Einstellungen und Kalibrierung erhalten.
+
+Die Seite baut der Workflow `.github/workflows/pages.yml` bei jedem Push: Tests, Firmware-Build, danach `scripts/build_flasher.py`.
+Einmalig musst du dafür im Repository einstellen: *Settings › Pages › Source: GitHub Actions*.
+Lokal: `pio run -e sda_s3_touch_128 && python3 scripts/build_flasher.py --out _site`, dann `_site/` über HTTPS oder `localhost` ausliefern (Web Serial verlangt einen sicheren Kontext).
+
 Ohne PlatformIO lassen sich die Tests mit `scripts/run_host_tests.sh` ausführen
 (g++ mit Address- und UB-Sanitizer).
 
