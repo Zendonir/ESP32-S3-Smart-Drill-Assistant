@@ -8,8 +8,10 @@ Das Gerät wird an eine Bohrmaschine oder einen Akkuschrauber montiert und zeigt
 einer kreisförmigen Zielanzeige, wie weit die Bohrachse vom Sollwinkel abweicht. Es
 arbeitet vollständig offline. WLAN, Weboberfläche, REST-API und OTA sind optional.
 
+**➜ Firmware flashen:** [https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/](https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/): direkt im Browser (Chrome/Edge am Desktop, USB). Dort gibt es auch die `firmware.bin` für das OTA-Update.
+
 > **Stand der Verifikation:** Die Firmware wird mit PlatformIO vollständig gebaut, und die
-> hardwareunabhängige Messbibliothek ist mit 80 Unit-Tests auf dem Host geprüft.
+> hardwareunabhängige Messbibliothek ist mit 86 Unit-Tests auf dem Host geprüft.
 > **Auf echter Hardware ist sie noch nicht getestet.** Pinbelegung, Achsorientierung des
 > QMI8658, Farbinvertierung des Displays, Touch-Orientierung und Akku-Spannungsteiler
 > müssen am konkreten Board geprüft werden, siehe [docs/Hardware.md](docs/Hardware.md)
@@ -61,7 +63,7 @@ pio test -e native                          # Unit-Tests auf dem PC
 
 ### Flashen im Browser (ohne Installation)
 
-Die Flash-Seite unter `https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/` (GitHub Pages) flasht die aktuelle Firmware direkt aus **Chrome oder Edge am Desktop** per Web Serial über [ESP Web Tools](https://esphome.github.io/esp-web-tools/).
+Die [Flash-Seite](https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/) (GitHub Pages) flasht die aktuelle Firmware direkt aus **Chrome oder Edge am Desktop** per Web Serial über [ESP Web Tools](https://esphome.github.io/esp-web-tools/).
 Board per USB-C anschließen, „Firmware installieren“ klicken, Port wählen.
 Bei der Frage „Gerät löschen?“ bleiben mit **Nein** Einstellungen und Kalibrierung erhalten.
 
@@ -79,7 +81,7 @@ Falls der Upload nicht startet: **BOOT** gedrückt halten, **RESET** kurz drück
 
 **WLAN einrichten und OTA-Update über das Portal:** Am Gerät *System › WLAN › Modus: Access Point* wählen.
 Dann mit dem Handy oder Laptop mit dem offenen WLAN `SmartDrill-XXXX` verbinden; die Portalseite öffnet sich automatisch (sonst `http://192.168.4.1/` aufrufen).
-Unter **Einrichtung** findest du die Netzwerksuche und die Verbindung mit deinem WLAN sowie das Firmware-Update: `firmware.bin` von der Flash-Seite herunterladen und hochladen.
+Unter **Einrichtung** findest du die Netzwerksuche und die Verbindung mit deinem WLAN sowie das Firmware-Update: `firmware.bin` von der [Flash-Seite](https://zendonir.github.io/ESP32-S3-Smart-Drill-Assistant/) herunterladen und hochladen.
 Ein Login ist im Portal nicht nötig; im Heimnetz meldest du dich mit `admin` und dem Web-Passwort vom Gerät an.
 Manche Portal-Minibrowser (v. a. iOS) erlauben keinen Datei-Upload; dann die Seite im normalen Browser unter `http://192.168.4.1/` öffnen.
 
