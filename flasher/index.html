@@ -92,7 +92,7 @@ footer{color:var(--dim);font-size:13px;margin-top:24px}
     </section>
     <section class="card">
       <h2>Update ohne Kabel (OTA)</h2>
-      <p class="meta" style="margin-top:0">Läuft die Firmware bereits mit WLAN: <a id="fwlink" href="#" download="firmware.bin">firmware.bin</a> herunterladen, Weboberfläche des Geräts öffnen (<code>http://&lt;IP&gt;/</code>), anmelden und unter <b>System › Firmware-Update</b> hochladen. Startet das neue Image nicht sauber, kehrt das Gerät automatisch zur alten Firmware zurück.</p>
+      <p class="meta" style="margin-top:0">Läuft die Firmware bereits mit WLAN: <a id="fwlink" href="#" download="firmware.bin">firmware.bin</a> herunterladen, Weboberfläche des Geräts öffnen (<code>http://&lt;IP&gt;/</code>), im Tab <b>Einrichtung</b> unter <b>Firmware-Update (OTA)</b> hochladen. Startet das neue Image nicht sauber, kehrt das Gerät automatisch zur alten Firmware zurück.</p>
     </section>
   </div>
 
@@ -122,7 +122,11 @@ let base = '';
 fetch('latest.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(l => {
   base = l.path;
   document.getElementById('installer').setAttribute('manifest', base + 'manifest.json');
-  document.getElementById('fwlink').href = base + 'firmware.bin';
+  const ota = l.ota || 'firmware.bin';
+  const link = document.getElementById('fwlink');
+  link.href = base + ota;
+  link.setAttribute('download', ota);
+  link.textContent = ota;
   document.getElementById('ver').textContent = `${l.version} (${l.commit})`;
   return fetch(base + 'build-info.json');
 }).then(r => r.json()).then(b => {

@@ -2,6 +2,7 @@
 
 | Version | Änderung |
 |---|---|
+| 1.5.4 | OTA-Datei mit Versionsnummer (`firmware-<version>.bin`) auf der Flash-Seite und als CI-Artefakt |
 | 1.5.3 | Diagnose im Web-Interface (System) mit Export als JSON und Kopieren; neuer Endpunkt `/api/diagnostics` |
 | 1.5.2 | CPU-Lastanzeige korrigiert (zeigte durch einen Messfehler immer ~100 %) |
 | 1.5.1 | Touch: einzelne Lesefehler beenden die Berührung nicht mehr (kein Zerfallen von Wischen/Halten); Touch-Fehler in der Diagnose |

@@ -80,7 +80,7 @@ progress{width:100%}pre{white-space:pre-wrap;font-size:12px;max-height:340px;ove
       <label>oder Name (SSID)</label><input id="wssid2" maxlength="32">
       <label>Passwort</label><input id="wpass" type="password" maxlength="64">
       <p><button class="pri" onclick="joinWifi()">Verbinden</button></p></div>
-    <div class="card"><h3>Firmware-Update (OTA)</h3><p class="small">firmware.bin aus <code>.pio/build/sda_s3_touch_128/</code>. Das neue Image bestätigt sich nach erfolgreichem Selbsttest; sonst automatische Rückkehr zur alten Firmware.</p>
+    <div class="card"><h3>Firmware-Update (OTA)</h3><p class="small"><code>firmware-&lt;version&gt;.bin</code> von der Flash-Seite (oder <code>firmware.bin</code> aus <code>.pio/build/sda_s3_touch_128/</code>). Das neue Image bestätigt sich nach erfolgreichem Selbsttest; sonst automatische Rückkehr zur alten Firmware.</p>
       <input type="file" id="fw" accept=".bin"><progress id="fwp" max="100" value="0"></progress><p><button class="pri" onclick="upload()">Hochladen</button> <span id="fwm"></span></p></div>
   </div>
 </section>

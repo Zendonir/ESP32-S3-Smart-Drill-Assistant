@@ -130,6 +130,9 @@ def main():
     install_esp_web_tools(args.out, args.esp_web_tools_tgz)
     for name, src, _ in parts:
         shutil.copy(src, os.path.join(build_dir, name))
+    # application image for OTA, named with the version (e.g. firmware-1.5.3.bin)
+    ota_name = f"firmware-{version}.bin"
+    shutil.copy(os.path.join(build, "firmware.bin"), os.path.join(build_dir, ota_name))
     manifest = {
         "name": "Smart Drill Assistant",
         "version": f"{version} ({commit})",
@@ -153,6 +156,7 @@ def main():
         "changes": changes,
         "version": version,
         "commit": commit,
+        "ota": ota_name,
         "date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         "env": args.env,
         "parts": [{"path": name, "offset": f"0x{off:X}", "size": os.path.getsize(src), "sha256": sha256(src)}
@@ -161,7 +165,7 @@ def main():
     with open(os.path.join(build_dir, "build-info.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, indent=2)
     with open(os.path.join(args.out, "latest.json"), "w", encoding="utf-8") as f:
-        json.dump({"version": version, "commit": commit, "path": f"builds/{commit}/"}, f)
+        json.dump({"version": version, "commit": commit, "path": f"builds/{commit}/", "ota": ota_name}, f)
     # GitHub Pages: serve files as they are (no Jekyll processing)
     open(os.path.join(args.out, ".nojekyll"), "w").close()
     print(f"flasher site written to {args.out} (version {version}, commit {commit})")

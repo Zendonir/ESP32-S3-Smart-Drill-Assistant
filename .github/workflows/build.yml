@@ -23,10 +23,16 @@ jobs:
         run: pio test -e native
       - name: Firmware
         run: pio run -e sda_s3_touch_128
+      - name: Versioned OTA image
+        run: |
+          V=$(sed -n 's/.*SDA_FW_VERSION_STR "\(.*\)".*/\1/p' include/Version.h)
+          cp .pio/build/sda_s3_touch_128/firmware.bin .pio/build/sda_s3_touch_128/firmware-$V.bin
+          echo "FW_VERSION=$V" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4
         with:
-          name: firmware
+          name: firmware-${{ env.FW_VERSION }}
           path: |
+            .pio/build/sda_s3_touch_128/firmware-${{ env.FW_VERSION }}.bin
             .pio/build/sda_s3_touch_128/firmware.bin
             .pio/build/sda_s3_touch_128/bootloader.bin
             .pio/build/sda_s3_touch_128/partitions.bin
