@@ -79,6 +79,7 @@ private:
     void hReboot();
     void hToken();
     void hLog();
+    void hDiagnostics();
     void hExport();
     void hImport();
     void hUpdateDone();

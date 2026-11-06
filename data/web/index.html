@@ -87,6 +87,7 @@ progress{width:100%}pre{white-space:pre-wrap;font-size:12px;max-height:340px;ove
 <section data-tab="System">
   <div class="grid">
     <div class="card"><h3>Status</h3><table id="sys"></table></div>
+    <div class="card"><h3>Diagnose</h3><div class="row"><button onclick="loadDiag()">Aktualisieren</button><button onclick="exportDiag()">Exportieren (JSON)</button><button onclick="copyDiag()">Kopieren</button><span id="diagm" class="small"></span></div><table id="diag"></table></div>
     <div class="card"><h3>Konfiguration</h3><div class="row"><button onclick="exportCfg()">Export</button><input type="file" id="imp" accept=".json" style="width:auto"><button onclick="importCfg()">Import</button></div>
       <label><input type="checkbox" id="impcal" style="width:auto"> Kalibrierung mit importieren</label>
       <p><button class="warn" onclick="if(confirm('Neustart?'))api('POST','/api/reboot')">Neustart</button></p></div>
@@ -110,7 +111,7 @@ function logout(){sessionStorage.removeItem('auth');AUTH='';$('app').classList.a
 function tabs(){const n=$('tabs');document.querySelectorAll('section').forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.dataset.tab;
  b.onclick=()=>{document.querySelectorAll('section').forEach(x=>x.classList.add('hide'));s.classList.remove('hide');n.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');onTab(s.dataset.tab)};
  n.appendChild(b);if(i)s.classList.add('hide');else b.classList.add('on')})}
-function onTab(t){if(t=='Einstellungen')loadCfg();if(t=='Profile')loadProf();if(t=='Kalibrierung')loadCal();if(t=='System'){loadSys();loadLog()}}
+function onTab(t){if(t=='Einstellungen')loadCfg();if(t=='Profile')loadProf();if(t=='Kalibrierung')loadCal();if(t=='System'){loadSys();loadDiag();loadLog()}}
 async function start(){$('login').classList.add('hide');$('app').classList.remove('hide');
  $('mode').innerHTML=MODES.map((m,i)=>`<option value=${i}>${m}</option>`).join('');$('mode').onchange=e=>api('POST','/api/mode',{mode:+e.target.value});
  $('tgR').innerHTML=AREF.map((t,i)=>`<option value=${i}>${t}</option>`).join('');
@@ -187,6 +188,17 @@ async function loadSys(){const s=await api('GET','/api/status');$('sys').innerHT
  row('Laufzeit',s.uptimeS+' s')+row('Heap frei / min',(s.freeHeap/1024|0)+' / '+(s.minFreeHeap/1024|0)+' kB')+row('PSRAM frei',(s.freePsram/1024|0)+' kB')+row('CPU (Schätzung)',s.cpuLoadEstimatePct.map(v=>f(v,0)+'%').join(' / '))+
  row('Akku',f(s.battery.voltage)+' V'+(s.battery.percentEstimate>=0?' (ca. '+s.battery.percentEstimate+'%)':'')+' · '+s.battery.chargeStateName)+row('WLAN',['Aus','AP','Client'][s.wifi.mode]+' '+s.wifi.ip+' '+s.wifi.ssid)+
  row('Selbsttest',['imu','touch','display','fs','calibrationLoaded'].map(k=>k+':'+(s.selfTest[k]?'ok':'–')).join(' '))}
+let DIAG=null;
+async function loadDiag(){DIAG=await api('GET','/api/diagnostics');const d=DIAG,f=(v,n=1)=>typeof v==='number'?v.toFixed(n):v;
+ $('diag').innerHTML=row('CPU',d.system.cpuMhz+' MHz · Last '+d.system.cpuLoadPct.map(v=>f(v,0)+'%').join(' / '))+row('UI',f(d.ui.fps,0)+' FPS · '+d.ui.mode+(d.ui.displayOn?'':' · Display aus'))+
+ row('Touch',(d.touch.present?'ok':'FEHLT')+' · Lesefehler '+d.touch.readErrors)+row('I2C','Fehler '+d.i2c.errors+' · Timeouts '+d.i2c.timeouts+' · Sperre '+d.i2c.lockTimeouts+' · Recovery '+d.i2c.recoveries)+
+ row('IMU',(d.imu.healthy?'ok':'FEHLER')+' · '+f(d.imu.rateHz)+' Hz · verloren '+d.imu.lostSamples+' · max. Intervall '+f(d.imu.maxIntervalMs)+' ms')+
+ row('Fusion',d.fusion.filter+' · Last '+f(d.fusion.loadPct)+'% · max '+d.fusion.maxProcessUs+' µs · '+d.fusion.motion+' · '+d.fusion.quality)+
+ row('Speicher','Heap '+Math.round(d.system.freeHeap/1024)+' kB (min '+Math.round(d.system.minFreeHeap/1024)+') · Stack IMU '+d.stacksFreeBytes.imu+' / Fusion '+d.stacksFreeBytes.fusion)+
+ row('Akku',f(d.battery.voltage,2)+' V · '+d.battery.chargeState)+row('WLAN','AP-Clients '+d.wifi.apClients+' · WS '+d.wifi.wsClients+' · Anfragen '+d.wifi.httpRequests)}
+function diagText(){return JSON.stringify(Object.assign({exportedAt:new Date().toISOString()},DIAG),null,1)}
+async function exportDiag(){await loadDiag();const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([diagText()],{type:'application/json'}));a.download='smartdrill-diagnose-'+DIAG.firmware.version+'-'+Date.now()+'.json';a.click()}
+async function copyDiag(){await loadDiag();try{await navigator.clipboard.writeText(diagText());$('diagm').textContent='kopiert'}catch(e){const t=document.createElement('textarea');t.value=diagText();document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();$('diagm').textContent='kopiert'}}
 async function loadLog(){const r=await fetch('/api/log',{headers:{'Authorization':'Basic '+AUTH}});$('log').textContent=await r.text()}
 function upload(){const file=$('fw').files[0];if(!file)return;const fd=new FormData();fd.append('firmware',file,file.name);const x=new XMLHttpRequest();
  x.upload.onprogress=e=>{$('fwp').value=e.loaded/e.total*100};x.onload=()=>{$('fwm').textContent=x.status==200?'Erfolgreich – Neustart …':('Fehler: '+x.responseText)};

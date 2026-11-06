@@ -79,6 +79,7 @@ abgeschnitten. Bei `PUT /api/config` werden nur die übergebenen Felder geänder
 | GET | `/api/wifi/scan` | WLAN-Suche (asynchron): `202 {"scanning":true}`, später `{"networks":[{"ssid","rssi","open"}]}` |
 | GET | `/api/token` | `{"token":"...","port":81}` |
 | GET | `/api/log` | letzte ca. 2 KB Log (text/plain) |
+| GET | `/api/diagnostics` | alle Diagnosedaten (CPU, UI-FPS, Touch, I2C, IMU-Timing, Fusion, Speicher, Akku, WLAN, Einstellungen, letztes Log) als JSON für Fehlerberichte |
 | GET | `/api/export` | Einstellungen, Profile und Kalibrierung als JSON (ohne Passwörter) |
 | POST | `/api/import` | `{"settings":{},"profiles":{},"calibration":{},"importCalibration":true}`: Erst werden alle Teile geprüft, dann wird übernommen |
 | POST | `/api/update` | multipart/form-data mit `firmware.bin`. Nach Erfolg folgt ein Neustart. Das neue Image bestätigt sich nach Selbsttest und 30 s Laufzeit, sonst Rollback |
