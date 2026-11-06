@@ -85,6 +85,8 @@ private:
     void checkStartupGyro();
     void setIdlePower(bool idle);
     uint32_t cpuMhzActive() const;
+    uint32_t cpuMhz_ = 0;
+    void setCpu(uint32_t mhz);   ///< changes the clock only if different
     uint32_t lastInputMs_ = 0;
     uint32_t imuCheckAtMs_ = 0;   ///< late IMU check if it was not ready at boot
     // power button feedback (drawn on the top layer, above every screen)

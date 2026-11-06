@@ -100,7 +100,7 @@ void UIManager::taskEntry(void* arg) { static_cast<UIManager*>(arg)->task(); }
 void UIManager::task() {
     const TickType_t fastPeriod = pdMS_TO_TICKS(1000 / appcfg::kUiTargetFps);
     const TickType_t idlePeriod = pdMS_TO_TICKS(1000 / appcfg::kUiIdleFps);
-    setCpuFrequencyMhz(cpuMhzActive());
+    setCpu(cpuMhzActive());
     TickType_t wake = xTaskGetTickCount();
     uint32_t lastMs = millis();
     uint32_t lastSlow = 0;
@@ -170,11 +170,24 @@ void UIManager::task() {
         // while the display is off a slow loop keeps touch handling alive
         if (displayOff_) vTaskDelay(pdMS_TO_TICKS(100)), wake = xTaskGetTickCount();
         else {
+            if (app_->display.touchPressed() || app_->touch.irqPending()) lastInputMs_ = millis();
+            // while the device is operated: full CPU clock for smooth menus / scrolling
+            const bool interactive = view_ != View::Main || chargeOverlay_ || powerOverlay_ || quick_ || picker_ ||
+                                     millis() - lastInputMs_ < 5000;
+            setCpu(interactive ? appcfg::kCpuMhzMax : cpuMhzActive());
             // full frame rate while something moves or is operated, otherwise less
-            if (app_->display.touchPressed()) lastInputMs_ = millis();
-            const bool busy = view_ != View::Main || snap_.motion != MotionState::Still || chargeOverlay_ ||
-                              powerOverlay_ || quick_ || picker_ || millis() - lastInputMs_ < 3000;
-            vTaskDelayUntil(&wake, busy ? fastPeriod : idlePeriod);
+            const bool busy = interactive || snap_.motion != MotionState::Still;
+            if (busy) {
+                vTaskDelayUntil(&wake, fastPeriod);
+            } else {
+                // reduced frame rate, but a touch is handled immediately (a short
+                // tap could otherwise fall between two input reads)
+                const TickType_t start = xTaskGetTickCount();
+                while (xTaskGetTickCount() - start < idlePeriod && !app_->touch.irqPending())
+                    vTaskDelay(pdMS_TO_TICKS(5));
+                if (app_->touch.irqPending()) lastInputMs_ = millis();
+                wake = xTaskGetTickCount();
+            }
         }
     }
 }
@@ -439,6 +452,12 @@ void UIManager::showGoodbye() {
     powerArc_ = nullptr;
 }
 
+void UIManager::setCpu(uint32_t mhz) {
+    if (mhz == cpuMhz_) return;
+    setCpuFrequencyMhz(mhz);
+    cpuMhz_ = mhz;
+}
+
 uint32_t UIManager::cpuMhzActive() const {
     return settings_.system.performance ? appcfg::kCpuMhzMax : appcfg::kCpuMhzEconomy;
 }
@@ -447,7 +466,7 @@ uint32_t UIManager::cpuMhzActive() const {
 // the touch controller sleep. Motion (system task, gyro rate) and touch (INT)
 // still wake the display.
 void UIManager::setIdlePower(bool idle) {
-    setCpuFrequencyMhz(idle ? appcfg::kCpuMhzIdle : cpuMhzActive());
+    setCpu(idle ? appcfg::kCpuMhzIdle : cpuMhzActive());
     app_->meas.setLowPower(idle);
     app_->touch.setLowPower(idle);
 }
@@ -496,7 +515,7 @@ void UIManager::applySettings(bool initial) {
     }
     if (initial || old.display.rotation != settings_.display.rotation) app_->display.setRotation(settings_.display.rotation);
     if (!initial && old.system.performance != settings_.system.performance && !displayOff_)
-        setCpuFrequencyMhz(cpuMhzActive());
+        setCpu(cpuMhzActive());
     if (!initial) {
         if (old.measurement.fusion != settings_.measurement.fusion) app_->meas.setFusion(settings_.measurement.fusion);
         if (old.measurement.filterStrength != settings_.measurement.filterStrength)

@@ -22,6 +22,8 @@ public:
     uint32_t errors() const { return errors_; }
     /// True if a touch interrupt occurred since the last call (used for wake-up).
     bool consumeActivity();
+    /// A touch interrupt arrived that was not read yet (finger down / moved).
+    bool irqPending() const;
     void sleep();
     void wake();
     /// Display off: controller may enter its own auto sleep (still wakes on touch

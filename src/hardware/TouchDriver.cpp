@@ -80,6 +80,8 @@ bool TouchDriver::read(int16_t& x, int16_t& y, bool& pressed) {
     return true;
 }
 
+bool TouchDriver::irqPending() const { return g_touchIrq; }
+
 bool TouchDriver::consumeActivity() {
     const bool a = g_touchActivity;
     g_touchActivity = false;

@@ -177,6 +177,9 @@ void MenuScreen::refresh() {
     for (size_t i = 0; i < items_.size() && i < valueLabels_.size(); ++i) {
         if (!items_[i].value) continue;
         const std::string v = items_[i].value();
+        // unchanged text: no relayout / redraw of the list (keeps scrolling smooth)
+        const char* cur = lv_label_get_text(valueLabels_[i]);
+        if (cur && v == cur) continue;
         lv_label_set_text(valueLabels_[i], v.c_str());
         if (items_[i].kind != MenuItem::Kind::Submenu) {
             if (v.empty()) lv_obj_add_flag(valueLabels_[i], LV_OBJ_FLAG_HIDDEN);
