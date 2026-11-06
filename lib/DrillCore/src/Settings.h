@@ -47,6 +47,7 @@ struct MeasurementSettings {
     int8_t hemisphere = 0;        ///< -1 down, +1 up, 0 auto
     ZeroKind zeroKind = ZeroKind::Tilt;
     bool reference3D = false;     ///< reference surface mode: use gyro heading
+    bool rotationComp = true;     ///< zero point: compensate rotation of the device on the surface (gyro)
     float customAngleDeg = 22.5f; ///< user defined quick select angle
     float tempCoeffAssumedDpsPerK = 0.02f;  ///< ASSUMED gyro bias tempco for uncertainty model
     bool onlineBiasTracking = true;

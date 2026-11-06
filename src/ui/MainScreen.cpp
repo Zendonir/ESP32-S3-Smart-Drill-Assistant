@@ -484,12 +484,14 @@ void MainScreen::updateLevel(const OrientationSnapshot& s, float dt) {
         hide(edgeLine_, true);
         layoutTarget(true);
         float x = l.tiltXDeg, y = l.tiltYDeg;
-        if (rel) relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
+        float relSigma = 0.0f, relTotal = 0.0f;
+        if (rel) relativeToZero(ref, s, x, y, relTotal, relSigma);
         if (s.upD.z < 0 && !rel) { x = -x; }  // face down: mirror so the bubble still rises
         // bubble rises to the high side: right edge up -> bubble right
-        const float total = sqrtf(x * x + y * y);
-        updateDeviationView(x, y, total, valid, profile_.toleranceDeg, dt, false, false);
-        lv_label_set_text(lblMode_, rel ? "WAAGE relativ" : (l.faceCorrected ? "WAAGE · Umschlag" : "WAAGE"));
+        const float total = rel ? relTotal : sqrtf(x * x + y * y);
+        const bool ok = valid && !(rel && 2.0f * relSigma > profile_.toleranceDeg);
+        updateDeviationView(x, y, total, ok, profile_.toleranceDeg, dt, false, false);
+        lv_label_set_text(lblMode_, rel ? (rotationCompActive(ref) ? "WAAGE rel. Fläche" : "WAAGE relativ") : (l.faceCorrected ? "WAAGE · Umschlag" : "WAAGE"));
         status_.valueDeg = total;
         pushHistory(x, y, total, s, dt);
     } else {
@@ -565,10 +567,16 @@ void MainScreen::updateZero(const OrientationSnapshot& s, float dt) {
     }
     hide(lblHint_, true);
     layoutTarget(true);
-    float x, y;
-    relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
-    const float tilt = sqrtf(x * x + y * y);
+    float x, y, tilt = 0.0f, rotSigma = 0.0f;
+    if (k == ReferenceKind::TiltZero) {
+        relativeToZero(ref, s, x, y, tilt, rotSigma);
+    } else {
+        relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
+        tilt = sqrtf(x * x + y * y);
+    }
     bool valid = s.valid && s.quality.usableForTarget(profile_.toleranceDeg, s.tiltSigmaDeg);
+    // rotation compensation: green only while the gyro part fits the tolerance
+    if (2.0f * rotSigma > profile_.toleranceDeg) valid = false;
     float total = tilt;
     float heading = 0, hSigma = 0;
     if (k == ReferenceKind::Full3D) {
@@ -582,7 +590,10 @@ void MainScreen::updateZero(const OrientationSnapshot& s, float dt) {
     updateDeviationView(x, y, total, valid, profile_.toleranceDeg, dt, false, k == ReferenceKind::Full3D);
     if (k == ReferenceKind::Full3D)
         lv_label_set_text_fmt(lblInfo_, "Dreh %+.1f° ±%.1f° (Gyro)", double(heading), double(hSigma));
-    lv_label_set_text(lblMode_, k == ReferenceKind::Full3D ? "NULL 3D" : "NULL Neigung");
+    if (k == ReferenceKind::TiltZero && rotSigma > 0.05f)
+        lv_label_set_text_fmt(lblInfo_, "±%.2g°  Gyro ±%.2f°", double(profile_.toleranceDeg), double(rotSigma));
+    lv_label_set_text(lblMode_, k == ReferenceKind::Full3D ? "NULL 3D"
+                                : (rotationCompActive(ref) ? "NULL Fläche" : "NULL Neigung"));
     status_.valueDeg = total;
     pushHistory(x, y, total, s, dt);
 }
@@ -758,7 +769,8 @@ bool MainScreen::toggleTempReference() {
         showToast("Keine Messwerte");
         return false;
     }
-    tempTilt_.captureTiltZero(s.upD, s.tiltSigmaDeg);
+    tempTilt_.captureTiltZero(s.upD, s.tiltSigmaDeg, &s.qWD);
+    tempHeadingSigma0_ = s.headingSigmaDeg;
     tempSurf_.captureSurface(s.qWD, false, s.tiltSigmaDeg);
     const DrillGeometry g = drillGeometry(s.qWD, profile_.mount);
     tempElevDeg_ = g.elevationDeg;
@@ -826,13 +838,16 @@ void MainScreen::updateSurfaceAngle(const OrientationSnapshot& s, float dt) {
         return;
     }
     hide(lblHint_, true);
-    const float a = valid ? fv_.update(surfaceAngleDeg(tempTilt_.tiltZeroUpD(), s.upD), dt) : NAN;
+    float rx = 0, ry = 0, rawAngle = 0, rotSigma = 0;
+    relativeToZero(tempTilt_, s, rx, ry, rawAngle, rotSigma);
+    const float a = valid ? fv_.update(rawAngle, dt) : NAN;
     fmtAngle(b, sizeof(b), valid ? nBig_.update(a) : NAN, false);
     lv_label_set_text(lblBig_, b);
     const theme::Palette& p = theme::pal();
     lv_obj_set_style_text_color(lblBig_, !valid ? p.invalid : (still ? p.fg : p.warn), 0);
     lv_label_set_text(lblXY_, still ? "Winkel zur Bezugsfläche" : "ruhig auflegen ...");
-    lv_label_set_text(lblInfo_, "2 s halten: Hold");
+    if (rotSigma > 0.05f) lv_label_set_text_fmt(lblInfo_, "Gyro ±%.2f°  2 s: Hold", double(rotSigma));
+    else lv_label_set_text(lblInfo_, "2 s halten: Hold");
     shownValue_ = a;
     status_.valueDeg = a;
 }
@@ -850,4 +865,29 @@ void MainScreen::updateRefRing(const OrientationSnapshot& s) {
         refRingShown_ = on;
         hide(tempRing_, !on);
     }
+}
+
+bool MainScreen::rotationCompActive(const ReferenceManager& ref) const {
+    return settings_.measurement.rotationComp && ref.hasOrientation();
+}
+
+void MainScreen::relativeToZero(const ReferenceManager& ref, const OrientationSnapshot& s, float& x, float& y,
+                                float& total, float& rotSigmaDeg) const {
+    rotSigmaDeg = 0.0f;
+    if (rotationCompActive(ref)) {
+        // compare the surface itself (normal of the device back) using the fused 3D
+        // orientation: turning the device on the same surface does not change it
+        const NormalDeviation d = surfaceNormalDeviation(ref.orientationRef(), s.qWD);
+        x = d.xDeg;
+        y = d.yDeg;
+        total = d.totalDeg;
+        // heading uncertainty accumulated since the capture, weighted by the slope
+        const float hs = (&ref == &tempTilt_ || &ref == &tempSurf_)
+                             ? std::fmax(0.0f, s.headingSigmaDeg - tempHeadingSigma0_)
+                             : ref.info().headingSigmaDeg;
+        rotSigmaDeg = hs * sinf(deg2rad(std::fmin(90.0f, d.refSlopeDeg)));
+        return;
+    }
+    relativeTilt(ref.tiltZeroUpD(), s.upD, x, y);
+    total = surfaceAngleDeg(ref.tiltZeroUpD(), s.upD);
 }

@@ -39,6 +39,22 @@ void relativeTilt(const Vec3& upRefD, const Vec3& upD, float& relXDeg, float& re
 /// horizontal (a rotation about the vertical is not observable).
 float surfaceAngleDeg(const Vec3& upRefD, const Vec3& upD);
 
+/// Change of the surface the device rests on (its back, normal = device +Z)
+/// between the reference orientation and now, from the fused 3D orientation.
+/// Unlike relativeTilt() this is independent of a rotation of the device on the
+/// surface (about its own Z axis): turning the device on the same sloped surface
+/// keeps the value at 0. X/Y are expressed in the current screen axes with the
+/// same sign convention as relativeTilt() (identical for a pure tilt).
+/// The part of the change about the vertical relies on the gyro-held heading;
+/// a heading error psi causes up to psi * sin(refSlope) error.
+struct NormalDeviation {
+    float xDeg = 0.0f;
+    float yDeg = 0.0f;
+    float totalDeg = 0.0f;    ///< angle between reference normal and current normal
+    float refSlopeDeg = 0.0f; ///< slope of the reference surface against the horizontal
+};
+NormalDeviation surfaceNormalDeviation(const Quat& qRef, const Quat& qNow);
+
 /// Angle of the face the device rests on against the horizontal (0..90 deg):
 /// the device axis closest to the vertical defines the support face.
 float supportFaceTiltDeg(const Vec3& upD);

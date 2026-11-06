@@ -202,3 +202,10 @@ Der temporäre Bezug ist schwerkraftbasiert und driftet nicht. Die gespeicherten
 4. Nochmal 2 s drücken oder doppelt tippen beendet Hold. Kurz gedrückt halten (0,8–2 s) ohne Hold löscht den Bezug.
 
 Ohne Bezug zeigt der Modus den Winkel der Auflagefläche zur Waagerechten. Wie bei jedem schwerkraftbasierten Winkelmesser stimmt der Winkel nur, wenn die gemeinsame Kante der beiden Flächen waagerecht liegt (z. B. Tischplatte und schräges Brett, Boden und Wand). Ein Drehen um die Senkrechte ist ohne Kompass nicht messbar.
+
+### Drehen auf der Fläche (Gyro-Ausgleich)
+
+Ein reiner Schwerkraft-Nullpunkt vergleicht die Lage des **Geräts**: Dreht man das Gerät auf einer schrägen Fläche um sich selbst, ändert sich der Wert, obwohl die Fläche gleich bleibt. Seit 1.5.0 vergleicht der Nullpunkt (Wasserwaage relativ, Nullpunkt-Modus, Flächenwinkel) standardmäßig die **Fläche**: Die Normale der Geräterückseite wird über die fusionierte 3D-Lage (Schwerkraft + Gyroskop) verglichen, Drehen auf derselben Fläche ergibt 0°.
+
+- Neigungsänderungen bleiben schwerkraftbasiert und driftfrei. Nur der Anteil um die Senkrechte kommt aus dem Gyroskop; bei schräger Bezugsfläche wirkt Gyro-Drift mit bis zu *Drift × sin(Flächenneigung)*. Diese geschätzte Unsicherheit wird als „Gyro ±…°“ angezeigt, Grün gibt es nur, solange sie in die Toleranz passt. Nullpunkt bei längerer Messung gelegentlich neu setzen.
+- Abschaltbar unter *Messung › Nullpunkt drehen › Gerät-Lage (nur Schwerkraft)*.

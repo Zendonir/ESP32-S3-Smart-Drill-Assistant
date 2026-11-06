@@ -428,7 +428,8 @@ void MeasurementPipeline::runCalibration(const Vec3& rawGyroD, const Vec3& rawAc
 // references / precision
 // ---------------------------------------------------------------------------
 void MeasurementPipeline::captureTiltZero() {
-    ref_.captureTiltZero(fusion_.active().upInDevice(), rad2deg(unc_.tiltSigmaRad()));
+    const Quat q = fusion_.active().orientation();
+    ref_.captureTiltZero(fusion_.active().upInDevice(), rad2deg(unc_.tiltSigmaRad()), &q);
 }
 void MeasurementPipeline::captureFull3D() {
     ref_.captureFull3D(fusion_.active().orientation(), rad2deg(unc_.tiltSigmaRad()));

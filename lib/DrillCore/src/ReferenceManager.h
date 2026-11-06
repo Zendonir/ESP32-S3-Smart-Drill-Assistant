@@ -40,8 +40,12 @@ struct ReferenceInfo {
 class ReferenceManager {
 public:
     void clear();
-    /// Captures the current tilt as zero (gravity referenced).
-    void captureTiltZero(const Vec3& upD, float tiltSigmaDeg);
+    /// Captures the current tilt as zero (gravity referenced). With the fused
+    /// orientation the surface normal is stored as well, so that a rotation of the
+    /// device on the surface (about its own Z axis) can be compensated.
+    void captureTiltZero(const Vec3& upD, float tiltSigmaDeg, const Quat* qWD = nullptr);
+    /// Tilt zero with stored orientation (rotation compensation possible).
+    bool hasOrientation() const { return hasQ_; }
     /// Captures the full orientation (gyro referenced).
     void captureFull3D(const Quat& qWD, float tiltSigmaDeg);
     /// Captures a reference surface; device lies with its back on the surface.
@@ -66,6 +70,7 @@ private:
     Vec3 upRefD_{0, 0, 1};
     Quat qRef_;
     Vec3 normalW_{0, 0, 1};
+    bool hasQ_ = false;
 };
 
 }  // namespace sda

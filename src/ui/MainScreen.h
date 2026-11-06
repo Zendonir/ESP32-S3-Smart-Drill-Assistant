@@ -119,6 +119,12 @@ private:
     void updateTempDrill(const sda::OrientationSnapshot& s, float dt);
     void updateSurfaceAngle(const sda::OrientationSnapshot& s, float dt);
     void updateRefRing(const sda::OrientationSnapshot& s);
+    /// Deviation from a tilt zero: surface based with gyro rotation compensation
+    /// (setting) or gravity only. rotSigmaDeg = estimated error of the gyro part.
+    void relativeToZero(const sda::ReferenceManager& ref, const sda::OrientationSnapshot& s, float& x, float& y,
+                        float& total, float& rotSigmaDeg) const;
+    bool rotationCompActive(const sda::ReferenceManager& ref) const;
+    float tempHeadingSigma0_ = 0.0f;
     bool refRingShown_ = false;
     float shownValue_ = NAN;           ///< surface angle as displayed (last frame)
     float pressValue_ = NAN;           ///< shownValue_ when the touch press started

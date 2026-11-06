@@ -38,6 +38,18 @@ float surfaceAngleDeg(const Vec3& upRefD, const Vec3& upD) {
     return rad2deg(std::atan2(a.cross(b).norm(), a.dot(b)));
 }
 
+NormalDeviation surfaceNormalDeviation(const Quat& qRef, const Quat& qNow) {
+    NormalDeviation d;
+    const Vec3 nRefW = qRef.rotate(Vec3::unitZ()).normalized();
+    // reference normal seen from the current device frame
+    const Vec3 v = qNow.rotateInverse(nRefW).normalized();
+    d.xDeg = rad2deg(safeAsin(v.x));
+    d.yDeg = rad2deg(safeAsin(v.y));
+    d.totalDeg = rad2deg(std::atan2(std::sqrt(v.x * v.x + v.y * v.y), v.z));
+    d.refSlopeDeg = rad2deg(std::atan2(std::sqrt(nRefW.x * nRefW.x + nRefW.y * nRefW.y), nRefW.z));
+    return d;
+}
+
 float supportFaceTiltDeg(const Vec3& upD) {
     const Vec3 u = upD.normalized();
     const float m = std::fmax(std::fabs(u.x), std::fmax(std::fabs(u.y), std::fabs(u.z)));

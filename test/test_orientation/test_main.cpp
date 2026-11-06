@@ -235,6 +235,35 @@ void test_surface_angle_gauge() {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 10.0f, supportFaceTiltDeg(Vec3(0, std::cos(deg2rad(10)), std::sin(deg2rad(10)))));
 }
 
+void test_surface_normal_deviation_rotation_invariant() {
+    // reference: device on a surface sloped by 30 deg (about world X)
+    const Quat qRef = Quat::fromAxisAngle(Vec3::unitX(), deg2rad(30));
+    // turning the device on the same surface (about its own Z) -> no deviation
+    for (float spin : {10.0f, 45.0f, 90.0f, 170.0f}) {
+        const Quat qNow = qRef * Quat::fromAxisAngle(Vec3::unitZ(), deg2rad(spin));
+        const NormalDeviation d = surfaceNormalDeviation(qRef, qNow);
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, d.totalDeg);
+        TEST_ASSERT_FLOAT_WITHIN(0.01f, 30.0f, d.refSlopeDeg);
+        // gravity only would report a change here
+        if (spin >= 45.0f) {
+            float gx, gy;
+            relativeTilt(qRef.rotateInverse(Vec3::unitZ()), qNow.rotateInverse(Vec3::unitZ()), gx, gy);
+            TEST_ASSERT_TRUE(std::sqrt(gx * gx + gy * gy) > 5.0f);
+        }
+    }
+    // a real tilt of the surface by 4 deg is measured, also after a spin
+    const Quat qNow = Quat::fromAxisAngle(Vec3::unitX(), deg2rad(34)) * Quat::fromAxisAngle(Vec3::unitZ(), deg2rad(60));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 4.0f, surfaceNormalDeviation(qRef, qNow).totalDeg);
+    // same sign convention as relativeTilt for a pure tilt from flat
+    const Quat qFlat;  // identity
+    const Quat qTilt = Quat::fromAxisAngle(Vec3::unitY(), deg2rad(-3));
+    const NormalDeviation d = surfaceNormalDeviation(qFlat, qTilt);
+    float rx, ry;
+    relativeTilt(Vec3::unitZ(), qTilt.rotateInverse(Vec3::unitZ()), rx, ry);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, rx, d.xDeg);
+    TEST_ASSERT_FLOAT_WITHIN(1e-3f, ry, d.yDeg);
+}
+
 int main(int, char**) {
     UNITY_BEGIN();
     RUN_TEST(test_level_angles_flat_and_edge);
@@ -250,5 +279,6 @@ int main(int, char**) {
     RUN_TEST(test_angle_target_zero_up_down_is_gravity_based);
     RUN_TEST(test_angle_target_zero_left_right_uses_gyro);
     RUN_TEST(test_surface_angle_gauge);
+    RUN_TEST(test_surface_normal_deviation_rotation_invariant);
     return UNITY_END();
 }

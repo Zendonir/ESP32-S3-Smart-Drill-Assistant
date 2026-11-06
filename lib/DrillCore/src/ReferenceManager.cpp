@@ -14,19 +14,25 @@ const char* referenceKindName(ReferenceKind k) {
     return "?";
 }
 
-void ReferenceManager::clear() { info_ = ReferenceInfo{}; }
+void ReferenceManager::clear() {
+    info_ = ReferenceInfo{};
+    hasQ_ = false;
+}
 
-void ReferenceManager::captureTiltZero(const Vec3& upD, float tiltSigmaDeg) {
+void ReferenceManager::captureTiltZero(const Vec3& upD, float tiltSigmaDeg, const Quat* qWD) {
     info_ = ReferenceInfo{};
     info_.kind = ReferenceKind::TiltZero;
     info_.tiltSigmaAtCaptureDeg = tiltSigmaDeg;
     upRefD_ = upD.normalized();
+    hasQ_ = qWD != nullptr;
+    if (hasQ_) qRef_ = *qWD;
 }
 
 void ReferenceManager::captureFull3D(const Quat& qWD, float tiltSigmaDeg) {
     info_ = ReferenceInfo{};
     info_.kind = ReferenceKind::Full3D;
     info_.usesGyro = true;
+    hasQ_ = true;
     info_.tiltSigmaAtCaptureDeg = tiltSigmaDeg;
     qRef_ = qWD;
     upRefD_ = qWD.rotateInverse(Vec3::unitZ());
@@ -38,6 +44,7 @@ void ReferenceManager::captureSurface(const Quat& qWD, bool use3D, float tiltSig
     info_.usesGyro = use3D;
     info_.tiltSigmaAtCaptureDeg = tiltSigmaDeg;
     qRef_ = qWD;
+    hasQ_ = true;
     normalW_ = qWD.rotate(Vec3::unitZ()).normalized();
     info_.surfaceSlopeDeg = rad2deg(angleBetween(normalW_, Vec3::unitZ()));
     if (info_.surfaceSlopeDeg > 90.0f) info_.surfaceSlopeDeg = 180.0f - info_.surfaceSlopeDeg;
@@ -47,7 +54,8 @@ void ReferenceManager::captureSurface(const Quat& qWD, bool use3D, float tiltSig
 void ReferenceManager::propagate(float dt, float inc) {
     if (info_.kind == ReferenceKind::None) return;
     info_.ageSec += dt;
-    if (info_.usesGyro) info_.headingSigmaDeg += rad2deg(inc);
+    // also for a tilt zero with orientation (rotation compensation uses the heading)
+    if (info_.usesGyro || hasQ_) info_.headingSigmaDeg += rad2deg(inc);
 }
 
 DrillTarget ReferenceManager::surfaceTarget() const {

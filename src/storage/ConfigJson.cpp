@@ -78,6 +78,7 @@ void settingsToJson(const AppSettings& s, JsonObject o, bool secrets) {
     m["hemisphere"] = s.measurement.hemisphere;
     m["zeroKind"] = static_cast<int>(s.measurement.zeroKind);
     m["reference3D"] = s.measurement.reference3D;
+    m["rotationComp"] = s.measurement.rotationComp;
     m["customAngleDeg"] = s.measurement.customAngleDeg;
     m["tempCoeffAssumedDpsPerK"] = s.measurement.tempCoeffAssumedDpsPerK;
     m["onlineBiasTracking"] = s.measurement.onlineBiasTracking;
@@ -142,6 +143,7 @@ bool settingsFromJson(JsonObjectConst o, AppSettings& out) {
         ok &= getNum(m, "hemisphere", s.measurement.hemisphere);
         ok &= getEnum(m, "zeroKind", s.measurement.zeroKind);
         ok &= getBool(m, "reference3D", s.measurement.reference3D);
+        ok &= getBool(m, "rotationComp", s.measurement.rotationComp);
         ok &= getNum(m, "customAngleDeg", s.measurement.customAngleDeg);
         ok &= getNum(m, "tempCoeffAssumedDpsPerK", s.measurement.tempCoeffAssumedDpsPerK);
         ok &= getBool(m, "onlineBiasTracking", s.measurement.onlineBiasTracking);

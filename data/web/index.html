@@ -144,7 +144,7 @@ function ref(t){api('POST','/api/reference',{type:t})}
 // ---- settings form, generated from the configuration object
 const LABELS={filterStrength:['Filterstärke',[0,1,2,3,4]],fusion:['Sensorfusion',['Mahony','Komplementär','Madgwick']],precisionWindowSec:['Präzisions-Messdauer [s]'],
  holdTimeSec:['Haltezeit Ziel [s]'],hemisphere:['Bohrrichtung',{'0':'Automatisch','-1':'Abwärts','1':'Aufwärts'}],zeroKind:['Nullpunkt-Art',['Neigung (driftfrei)','3D (Gyro)']],
- reference3D:['Referenzfläche 3D (Gyro)'],customAngleDeg:['Eigener Schnellwinkel [°]'],tempCoeffAssumedDpsPerK:['Angenommener Gyro-TK [°/s/K]'],onlineBiasTracking:['Online-Bias-Nachführung'],
+ reference3D:['Referenzfläche 3D (Gyro)'],rotationComp:['Nullpunkt: Drehen auf der Fläche ausgleichen (Gyro)'],customAngleDeg:['Eigener Schnellwinkel [°]'],tempCoeffAssumedDpsPerK:['Angenommener Gyro-TK [°/s/K]'],onlineBiasTracking:['Online-Bias-Nachführung'],
  startupGyroCal:['Gyro-Kalibrierung beim Start',['Nie','Wenn ruhig','Immer (geführt)']],lastMode:['Betriebsmodus',MODES],brightness:['Helligkeit [%]'],dimAfterSec:['Dimmen nach [s] (0=nie)'],
  offAfterSec:['Display aus nach [s] (0=nie)'],rotation:['Displayrotation',['0°','90°','180°','270°']],theme:['Design',['Dunkel','Hoher Kontrast']],colorMode:['Farbmodus',['Standard','Farbenblind']],
  largeFont:['Schriftgröße',['Normal','Groß']],decimals:['Nachkommastellen',{'1':'1','2':'2'}],touchLockAuto:['Touchsperre bei Vibration'],showHistory:['Verlauf anzeigen'],
