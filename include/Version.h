@@ -4,8 +4,8 @@
 #define SDA_FW_NAME "SmartDrillAssistant"
 #define SDA_FW_VERSION_MAJOR 1
 #define SDA_FW_VERSION_MINOR 5
-#define SDA_FW_VERSION_PATCH 1
-#define SDA_FW_VERSION_STR "1.5.1"
+#define SDA_FW_VERSION_PATCH 2
+#define SDA_FW_VERSION_STR "1.5.2"
 // git commit of the build, injected by scripts/embed_web.py
 #ifndef SDA_FW_COMMIT
 #define SDA_FW_COMMIT "unknown"

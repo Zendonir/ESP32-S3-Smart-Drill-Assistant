@@ -3,6 +3,7 @@
 
 #include <esp_freertos_hooks.h>
 #include <esp_timer.h>
+#include <hal/cpu_hal.h>
 
 namespace cpu_monitor {
 namespace {
@@ -14,15 +15,19 @@ struct CoreState {
 };
 CoreState g_core[2];
 
+// The idle task normally executes WAITI (sleep until the next interrupt) after
+// the hooks. The hook does that itself and measures how long the core slept:
+// that time is idle time. Returning false tells the idle task not to execute
+// another WAITI; it calls the hook again right away. Power consumption is the
+// same as without the monitor. (The previous version timed the gaps between
+// hook calls; with WAITI they are ~1 ms tick periods and the load read ~100 %.)
 template <int N>
 bool idleHook() {
     CoreState& c = g_core[N];
-    const int64_t now = esp_timer_get_time();
-    const int64_t gap = now - c.lastHook;
-    // consecutive idle hook calls within 200 us mean the core was idle in between
-    if (gap > 0 && gap < 200) c.idleUs = c.idleUs + gap;
-    c.lastHook = now;
-    return true;  // keep calling while idle
+    const int64_t t0 = esp_timer_get_time();
+    cpu_hal_waiti();
+    c.idleUs = c.idleUs + (esp_timer_get_time() - t0);
+    return false;
 }
 }  // namespace
 
