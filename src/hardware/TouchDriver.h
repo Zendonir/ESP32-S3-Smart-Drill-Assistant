@@ -38,6 +38,7 @@ private:
     uint8_t chipId_ = 0, fw_ = 0;
     uint32_t errors_ = 0;
     uint32_t lastReadMs_ = 0;
+    uint32_t failSinceMs_ = 0;   ///< first failed read of the current error streak (0 = none)
     bool lowPower_ = false;
     void reset();
 };

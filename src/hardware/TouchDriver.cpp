@@ -62,12 +62,24 @@ bool TouchDriver::read(int16_t& x, int16_t& y, bool& pressed) {
     g_touchIrq = false;
     lastReadMs_ = now;
     uint8_t b[6];
-    if (!bus_.readRegs(board::kTouchAddr, 0x01, b, 6, 3)) {
+    if (!bus_.readRegs(board::kTouchAddr, 0x01, b, 6, 5)) {
+        // A single failed read (bus busy, controller NACK) must not end the touch:
+        // LVGL would see a release and split one press/swipe into several. Keep
+        // the last state and only report a release after 150 ms of failures.
         errors_++;
+        if (!failSinceMs_) failSinceMs_ = now ? now : 1;
+        if (lastPressed_ && now - failSinceMs_ < 150) {
+            g_touchIrq = true;  // retry on the next read
+            x = lastX_;
+            y = lastY_;
+            pressed = true;
+            return true;
+        }
         pressed = false;
         lastPressed_ = false;
         return false;
     }
+    failSinceMs_ = 0;
     const uint8_t fingers = b[1];
     pressed = fingers > 0 && fingers < 3;
     if (pressed) {

@@ -2,6 +2,7 @@
 
 | Version | Änderung |
 |---|---|
+| 1.5.1 | Touch: einzelne Lesefehler beenden die Berührung nicht mehr (kein Zerfallen von Wischen/Halten); Touch-Fehler in der Diagnose |
 | 1.5.0 | Nullpunkt/relativ: Drehen des Geräts auf derselben Fläche wird per Gyroskop ausgeglichen (Vergleich der Flächennormalen in 3D) |
 | 1.4.1 | Bedienung flüssiger: volle CPU-Leistung während der Bedienung, Touch auch bei reduzierter Bildrate sofort, Menü ohne ständiges Neuzeichnen |
 | 1.4.0 | Gedrückt halten = Nullpunkt/Bezug mit rotem Ring (nochmal = Original), Doppeltippen = Hold. Flächenwinkel: 0,8 s = Bezug, mit Bezug 2 s = Hold |

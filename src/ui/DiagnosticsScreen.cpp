@@ -89,7 +89,10 @@ void DiagnosticsScreen::update() {
     add("max. Intervall %.1f ms\n", double(s.timing.maxIntervalMs));
     add("Queue-Überlauf %lu\n", static_cast<unsigned long>(ms.queueOverflows));
     add("I2C Fehler %lu  Timeouts %lu\n", static_cast<unsigned long>(bs.errors), static_cast<unsigned long>(bs.timeouts));
-    add("I2C Recovery %lu\n", static_cast<unsigned long>(bs.recoveries));
+    add("I2C Recovery %lu  Sperre %lu\n", static_cast<unsigned long>(bs.recoveries),
+        static_cast<unsigned long>(bs.lockTimeouts));
+    add("Touch %s  Lesefehler %lu\n", app_->touch.present() ? "ok" : "FEHLT",
+        static_cast<unsigned long>(app_->touch.errors()));
     add("Clipping %lu  unplaus. %lu\n", static_cast<unsigned long>(s.clipCount),
         static_cast<unsigned long>(s.implausibleCount));
     add("Temp %.1f °C\n", double(s.temperatureC));
